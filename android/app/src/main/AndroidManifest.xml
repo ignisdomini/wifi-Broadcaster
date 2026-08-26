@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================================
+         Разрешения для Wi-Fi P2P (Wi-Fi Direct) и обнаружения служб.
+
+         API 21..32  : система считает обнаружение способом узнать
+                       местоположение, поэтому нужно и разрешение
+                       ACCESS_FINE_LOCATION, и включённый системный
+                       тумблер «Геолокация».
+         API 33 (T)+ : его заменяет NEARBY_WIFI_DEVICES. Флаг
+                       neverForLocation — обещание платформе, что мы
+                       не вычисляем по результатам местоположение;
+                       он и позволяет отказаться от разрешения на
+                       геолокацию (отсюда maxSdkVersion="32" ниже).
+         ============================================================ -->
+
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- Нужен и самому WifiP2pManager на ряде прошивок, и отправке
+         прикреплённого контента на сайт. Сам обмен сообщениями по воздуху
+         интернета не требует. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+
+    <!-- ============================================================
+         Работа при погасшем экране.
+
+         Без переднеплановой службы система через несколько минут
+         усыпляет процесс, и обнаружение служб перестаёт что-либо
+         приносить. Для радиоинформатора это и есть главный сценарий:
+         телефон лежит в кармане, а объявление соседа приходит именно
+         тогда. WAKE_LOCK нужен потому, что в глубоком сне не
+         срабатывают таймеры и круги обнаружения не запускаются.
+         ============================================================ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"
+        tools:targetApi="34" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Уведомление службы: с Android 13 его показ надо спрашивать.
+         Откажут — служба всё равно работает, просто молча. -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS"
+        tools:targetApi="33" />
+
+    <!-- Без Wi-Fi Direct приложению нечего делать. -->
+    <uses-feature
+        android:name="android.hardware.wifi.direct"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Efir">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Держит приём и вещание, пока экран погашен. Не экспортируется:
+             запускать её со стороны незачем. -->
+        <service
+            android:name=".p2p.EfirRadioService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+    </application>
+</manifest>

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пиши в эфир — ЭФИР, объявление соседям без интернета</title>
+<meta name="description" content="Одна строка — и её прочтут все, кто рядом. 140 байт, которые доходят без интернета, вышек и регистрации. Приложение ЭФИР.">
+<meta property="og:title" content="Пиши в эфир">
+<meta property="og:description" content="Одна строка — и её прочтут все, кто рядом. Без интернета и вышек.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230B0E14'/><rect x='6' y='13' width='20' height='2.6' rx='1.3' fill='%2354E6C3'/><rect x='6' y='19' width='13' height='2.6' rx='1.3' fill='%2354E6C3' opacity='.6'/><rect x='22' y='19' width='3' height='2.6' rx='1.3' fill='%2354E6C3'/></svg>">
+<style>
+/* ============================================================
+   ПИШИ В ЭФИР — сайт про строку.
+
+   Главный герой здесь — текст, который набирается сам: страница
+   должна ощущаться как поле ввода. Отсюда моноширинный шрифт,
+   мигающий курсор и счётчик байтов, как в самом приложении.
+   ============================================================ */
+
+:root{
+  --bg:#0B0E14;
+  --panel:#11151E;
+  --ink:#E8F0F5;
+  --soft:#8A9AAB;
+  --mint:#54E6C3;
+  --amber:#FFC46B;
+  --line:#1D2432;
+  --sans:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--mint)}
+.wrap{max-width:66rem;margin:0 auto;padding:0 1.5rem}
+
+header{position:sticky;top:0;z-index:40;background:rgba(11,14,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 0;gap:1rem}
+.logo{font-family:var(--mono);font-weight:700;letter-spacing:.2em;font-size:.9rem;color:var(--mint)}
+.head nav{display:flex;gap:1.3rem;font-size:.9rem}
+.head nav a{color:var(--soft);text-decoration:none}
+.head nav a:hover{color:var(--mint)}
+@media(max-width:640px){.head nav{display:none}}
+
+/* padding-block, а не padding: сокращённая запись затирала боковые поля .wrap. */
+.hero{padding-block:4.5rem 3rem}
+h1{font-size:clamp(2.3rem,7vw,4.6rem);line-height:1.02;margin:0 0 1.1rem;letter-spacing:-.035em;font-weight:800}
+h1 .cur{color:var(--mint);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.lead{color:var(--soft);font-size:1.08rem;max-width:36rem;margin:0 0 2rem}
+
+/* ---------- поле, которое печатает само ---------- */
+.composer{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:44rem;
+}
+.composer-top{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;border-bottom:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(84,230,195,.5);animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(84,230,195,.45)}70%{box-shadow:0 0 0 11px rgba(84,230,195,0)}}
+.composer-top b{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);font-weight:700}
+.composer-top .ch{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--amber)}
+
+.field{padding:1.3rem 1rem;min-height:5.6rem;font-family:var(--mono);font-size:1.12rem;line-height:1.5}
+.field .caret{display:inline-block;width:.55ch;background:var(--mint);animation:blink 1.05s steps(1) infinite;color:transparent}
+.composer-foot{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;border-top:1px solid var(--line);font-family:var(--mono);font-size:.75rem;color:var(--soft)}
+.bytes b{color:var(--mint);font-weight:700}
+.send{background:var(--mint);color:#06231D;border:0;border-radius:100px;padding:.45rem 1.1rem;font:inherit;font-weight:700;cursor:default}
+
+.actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:2rem}
+.btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--mint);color:#06231D;font-weight:700;padding:.9rem 1.9rem;border-radius:100px;text-decoration:none}
+.btn:hover{background:#7BF0D4}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:transparent;border-color:var(--mint);color:var(--mint)}
+
+section{padding:4.2rem 0}
+.alt{background:var(--panel);border-block:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mint);margin:0 0 .7rem}
+h2{font-size:clamp(1.6rem,4.2vw,2.5rem);line-height:1.13;margin:0 0 .9rem;letter-spacing:-.02em;font-weight:800}
+.sub{color:var(--soft);max-width:38rem;margin:0 0 2.2rem}
+
+.lines{display:grid;gap:.7rem}
+.line{
+  display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:baseline;
+  background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:.85rem 1rem;
+  transition:border-color .2s ease,transform .2s ease;
+}
+.alt .line{background:var(--panel)}
+.line:hover{border-color:var(--mint);transform:translateX(3px)}
+.line code{font-family:var(--mono);font-size:.72rem;color:var(--amber);white-space:nowrap}
+.line span{font-family:var(--mono);font-size:.98rem}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.3rem}
+.alt .card{background:var(--bg)}
+.card h3{margin:0 0 .4rem;font-size:1.02rem}
+.card p{margin:0;color:var(--soft);font-size:.94rem}
+.card .num{font-family:var(--mono);color:var(--mint);font-size:.8rem;display:block;margin-bottom:.5rem}
+
+/* ---------- кнопка магазина ---------- */
+/* Бейдж в духе магазинных: значок слева, две строки. Значок наш, нейтральный —
+   фирменный знак RuStore рисовать по памяти нельзя. */
+.store{display:inline-flex;align-items:center;gap:.7rem;background:#54E6C3;color:#06231D;
+  border:1px solid #54E6C3;border-radius:14px;padding:.6rem 1.25rem .6rem 1rem;
+  text-decoration:none;transition:transform .16s ease,filter .16s ease}
+.store:hover{text-decoration:none;color:#06231D;transform:translateY(-1px);filter:brightness(1.08)}
+.store-i{width:26px;height:26px;flex:0 0 auto}
+.store span{display:grid;line-height:1.15;font-weight:700;font-size:1.05rem}
+.store b{font-weight:500;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.72}
+
+footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--soft);font-size:.85rem}
+.foot{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between}
+
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <div class="logo">ЭФИР_</div>
+    <nav>
+      <a href="#chto">Что писать</a>
+      <a href="#skolko">140 байт</a>
+      <a href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener">Скачать</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <h1>Пиши в эфир<span class="cur">_</span></h1>
+    <p class="lead">
+      Одна строка — и её прочтут все, кто рядом. Без интернета, без вышек,
+      без регистрации по номеру. Написал — висит в воздухе и повторяется само,
+      пока не сменишь.
+    </p>
+
+    <div class="composer">
+      <div class="composer-top">
+        <span class="dot"></span>
+        <b>В эфире</b>
+        <span class="ch" id="ch">к2 · Еда и кафе</span>
+      </div>
+      <div class="field"><span id="typed"></span><span class="caret">&nbsp;</span></div>
+      <div class="composer-foot">
+        <span class="bytes"><b id="bytes">0</b>/140 байт</span>
+        <span class="send">Передать</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+      <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+      <a class="btn btn-ghost" href="#chto">О чём писать</a>
+    </div>
+  </section>
+
+  <section id="chto" class="alt">
+    <div class="wrap">
+      <p class="eyebrow">Что пишут</p>
+      <h2>Строка, которая доходит до нужных людей</h2>
+      <p class="sub">
+        В эфире нет смысла писать «всем интернетам». Здесь пишут тем, кто
+        в двух шагах и может прийти прямо сейчас.
+      </p>
+
+      <div class="lines">
+        <div class="line"><code>к2 · еда</code><span>Обед за 250 до 15:00, осталось четыре порции</span></div>
+        <div class="line"><code>к3 · скидки</code><span>Скажите «эфир» — кофе за полцены до вечера</span></div>
+        <div class="line"><code>к4 · рынок</code><span>Привезли черешню, третий ряд от входа</span></div>
+        <div class="line"><code>к5 · туризм</code><span>Стоянка у брода занята, идите выше по течению</span></div>
+        <div class="line"><code>к7 · объявления</code><span>Отдам детскую коляску, второй подъезд, до восьми</span></div>
+        <div class="line"><code>к6 · тревога</code><span>Потерялся мальчик 6 лет, синяя куртка, у школы</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="skolko">
+    <div class="wrap">
+      <p class="eyebrow">Про длину</p>
+      <h2>Сто сорок байт — и это не жадность</h2>
+      <p class="sub">
+        Столько помещается в служебную запись радиообъявления: сообщение едет
+        внутри неё, а не по сети. Ограничение честное — зато строка доходит
+        туда, где никакой сети нет.
+      </p>
+
+      <div class="grid">
+        <article class="card">
+          <span class="num">01</span>
+          <h3>Коротко — значит прочтут</h3>
+          <p>Строка читается за секунду, на ходу, не открывая ничего лишнего.</p>
+        </article>
+        <article class="card">
+          <span class="num">02</span>
+          <h3>Нужно длиннее — есть лента</h3>
+          <p>Длинный текст ложится на сайт, а в эфир идёт короткий код страницы.</p>
+        </article>
+        <article class="card">
+          <span class="num">03</span>
+          <h3>Повторяется само</h3>
+          <p>Пока сообщение висит в эфире, его услышит каждый, кто подойдёт.</p>
+        </article>
+        <article class="card">
+          <span class="num">04</span>
+          <h3>Можно по расписанию</h3>
+          <p>Завтрак до одиннадцати, обед до трёх, рынок по выходным — меняется само.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap" style="text-align:center">
+      <h2>Напишите первую строку</h2>
+      <p class="sub" style="margin-inline:auto">
+        Позывной, кодовое слово — и вы в эфире. Больше ничего не спросят.
+      </p>
+      <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+      <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>ЭФИР — автономный радиоинформатор</span>
+    <span><a href="https://radioinformator.ru">radioinformator.ru</a></span>
+  </div>
+</footer>
+
+<script>
+// Поле печатает объявления само: страница должна ощущаться как ввод сообщения.
+(function () {
+  var samples = [
+    ['Обед за 250 до 15:00, осталось четыре порции', 'к2 · Еда и кафе'],
+    ['Привезли черешню, третий ряд от входа', 'к4 · Рынок и торговля'],
+    ['Отдам коляску, второй подъезд, до восьми', 'к7 · Объявления'],
+    ['Стоянка у брода занята, идите выше', 'к5 · Туризм и походы'],
+    ['Скажите «эфир» — кофе за полцены', 'к3 · Скидки и промокоды']
+  ];
+
+  var out = document.getElementById('typed');
+  var bytes = document.getElementById('bytes');
+  var chan = document.getElementById('ch');
+  var n = 0;
+
+  // Счётчик показывает байты UTF-8, как в приложении: кириллица тут по два.
+  function utf8(s) { return new Blob([s]).size; }
+
+  function type(text, done) {
+    var i = 0;
+    (function step() {
+      out.textContent = text.slice(0, i);
+      bytes.textContent = utf8(out.textContent);
+      if (i++ <= text.length) { setTimeout(step, 45); } else { setTimeout(done, 2600); }
+    })();
+  }
+
+  function erase(done) {
+    (function step() {
+      var t = out.textContent;
+      if (!t.length) { return done(); }
+      out.textContent = t.slice(0, -1);
+      bytes.textContent = utf8(out.textContent);
+      setTimeout(step, 18);
+    })();
+  }
+
+  function loop() {
+    var s = samples[n % samples.length];
+    chan.textContent = s[1];
+    type(s[0], function () { erase(function () { n++; loop(); }); });
+  }
+
+  loop();
+})();
+</script>
+</body>
+</html>

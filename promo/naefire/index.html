@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сижу на эфире — ЭФИР, связь без интернета</title>
+<meta name="description" content="Не «сижу в интернете», а сижу на эфире. Тихая сеть на расстоянии голоса: соседи, двор, кафе за углом. Приложение ЭФИР.">
+<meta property="og:title" content="Сижу на эфире">
+<meta property="og:description" content="Тихая сеть на расстоянии голоса. Без ленты, без алгоритмов, без чужих стран.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23F3EAD9'/><circle cx='16' cy='21' r='3.6' fill='%23B4632A'/><path d='M10 17a8.5 8.5 0 0 1 12 0' stroke='%23B4632A' stroke-width='2.4' fill='none' stroke-linecap='round'/><path d='M6 12.5a14 14 0 0 1 20 0' stroke='%23B4632A' stroke-width='2.4' fill='none' stroke-linecap='round' opacity='.45'/></svg>">
+<style>
+/* ============================================================
+   СИЖУ НА ЭФИРЕ — сайт домашний и неторопливый.
+
+   Тон обратный «будь в эфире»: не призыв, а состояние. Отсюда
+   тёплая бумага вместо тёмного неона, медленное «дыхание»
+   лампы и лента, которая приходит сама, строчка за строчкой.
+   ============================================================ */
+
+:root{
+  --paper:#F3EAD9;
+  --card:#FBF6EC;
+  --ink:#2A2018;
+  --soft:#6B5B4B;
+  --muted:#9B8A78;
+  --warm:#B4632A;
+  --glow:#E9A23B;
+  --line:#E2D4BE;
+  --sans:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--warm)}
+.wrap{max-width:64rem;margin:0 auto;padding:0 1.5rem}
+
+header{position:sticky;top:0;z-index:40;background:rgba(243,234,217,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 0;gap:1rem}
+.logo{font-weight:800;letter-spacing:.14em;font-size:.95rem;display:flex;align-items:center;gap:.55rem}
+
+/* Лампа: медленно дышит, как накал в старом приёмнике. */
+.lamp{
+  width:11px;height:11px;border-radius:50%;background:var(--glow);
+  box-shadow:0 0 10px 2px rgba(233,162,59,.75);
+  animation:breathe 4.5s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{opacity:.55;box-shadow:0 0 6px 1px rgba(233,162,59,.5)}
+  50%{opacity:1;box-shadow:0 0 16px 4px rgba(233,162,59,.85)}
+}
+.head nav{display:flex;gap:1.3rem;font-size:.9rem}
+.head nav a{color:var(--soft);text-decoration:none}
+.head nav a:hover{color:var(--warm)}
+@media(max-width:620px){.head nav{display:none}}
+
+/* padding-block, а не padding: сокращённая запись затирала боковые поля .wrap. */
+.hero{padding-block:4.5rem 3rem;display:grid;grid-template-columns:1.05fr .95fr;gap:3rem;align-items:center}
+@media(max-width:860px){.hero{grid-template-columns:1fr;gap:2rem}}
+
+h1{font-size:clamp(2.2rem,6vw,4rem);line-height:1.05;margin:0 0 1rem;letter-spacing:-.03em;font-weight:800}
+h1 em{font-style:normal;color:var(--warm)}
+.lead{font-size:1.08rem;color:var(--soft);max-width:32rem;margin:0 0 1.8rem}
+
+.actions{display:flex;gap:.7rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--warm);color:#fff;font-weight:600;padding:.85rem 1.7rem;border-radius:100px;text-decoration:none}
+.btn:hover{background:#C7712F}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:transparent;border-color:var(--warm);color:var(--warm)}
+
+/* ---------- приёмник: сюда сами приходят объявления ---------- */
+.set{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:1.2rem;box-shadow:0 1px 2px rgba(42,32,24,.04),0 14px 40px rgba(42,32,24,.07);
+}
+.set-top{display:flex;align-items:center;gap:.6rem;padding:0 .3rem .8rem;border-bottom:1px solid var(--line);margin-bottom:.8rem}
+.set-top b{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* Шкала настройки — стрелка неспешно ходит туда-сюда. */
+.dial{position:relative;flex:1;height:20px;overflow:hidden}
+.dial::before{
+  content:"";position:absolute;inset:auto 0 8px;height:1px;background:var(--line);
+}
+.dial i{position:absolute;bottom:4px;width:1px;height:9px;background:var(--line)}
+.needle{
+  position:absolute;bottom:2px;width:2px;height:14px;background:var(--warm);border-radius:2px;
+  animation:tune 9s ease-in-out infinite;
+}
+@keyframes tune{0%,100%{left:12%}50%{left:82%}}
+
+.log{display:grid;gap:.5rem;min-height:14.5rem;align-content:start}
+.msg{
+  background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--warm);
+  border-radius:10px;padding:.6rem .8rem;
+  animation:arrive .45s ease both;
+}
+@keyframes arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:var(--warm)}
+.msg span{font-size:.95rem}
+
+.tag{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--warm);background:#F7E8D6;border-radius:100px;padding:.3rem .8rem;margin-bottom:1.1rem;font-weight:700}
+
+section{padding:4rem 0}
+.alt{background:var(--card);border-block:1px solid var(--line)}
+h2{font-size:clamp(1.6rem,4vw,2.4rem);line-height:1.15;margin:0 0 .8rem;letter-spacing:-.02em;font-weight:800}
+.sub{color:var(--soft);max-width:38rem;margin:0 0 2.2rem}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+.note{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.3rem}
+.alt .note{background:var(--paper)}
+.note h3{margin:0 0 .4rem;font-size:1.05rem}
+.note p{margin:0;color:var(--soft);font-size:.95rem}
+.note.no h3{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+
+.quote{
+  font-size:clamp(1.3rem,3.4vw,2rem);line-height:1.35;font-weight:700;letter-spacing:-.01em;
+  max-width:36rem;margin:0 0 1rem;
+}
+.quote span{color:var(--warm)}
+
+/* ---------- кнопка магазина ---------- */
+/* Бейдж в духе магазинных: значок слева, две строки. Значок наш, нейтральный —
+   фирменный знак RuStore рисовать по памяти нельзя. */
+.store{display:inline-flex;align-items:center;gap:.7rem;background:#2A2018;color:#F3EAD9;
+  border:1px solid #2A2018;border-radius:14px;padding:.6rem 1.25rem .6rem 1rem;
+  text-decoration:none;transition:transform .16s ease,filter .16s ease}
+.store:hover{text-decoration:none;color:#F3EAD9;transform:translateY(-1px);filter:brightness(1.08)}
+.store-i{width:26px;height:26px;flex:0 0 auto}
+.store span{display:grid;line-height:1.15;font-weight:700;font-size:1.05rem}
+.store b{font-weight:500;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.72}
+
+footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-size:.85rem}
+.foot{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <div class="logo"><span class="lamp"></span>ЭФИР</div>
+    <nav>
+      <a href="#chto">Что это</a>
+      <a href="#tishe">Чего здесь нет</a>
+      <a href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener">Скачать</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <div>
+      <span class="tag">На эфире</span>
+      <h1>Сижу<br><em>на эфире</em></h1>
+      <p class="lead">
+        Не «сижу в интернете», где всё отовсюду и сразу. Сижу на эфире — слышу
+        свой двор, своё кафе за углом, свою тропу. Тихая сеть на расстоянии
+        голоса, без сервера, без ленты и без чужих алгоритмов.
+      </p>
+      <div class="actions">
+        <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+        <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+        <a class="btn btn-ghost" href="#chto">Что это такое</a>
+      </div>
+    </div>
+
+    <div class="set" aria-hidden="true">
+      <div class="set-top">
+        <b>Приём</b>
+        <div class="dial">
+          <i style="left:8%"></i><i style="left:24%"></i><i style="left:40%"></i>
+          <i style="left:56%"></i><i style="left:72%"></i><i style="left:88%"></i>
+          <span class="needle"></span>
+        </div>
+        <b id="near">3 рядом</b>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+
+  <section id="chto" class="alt">
+    <div class="wrap">
+      <h2>Эфир — это когда слышно только рядом</h2>
+      <p class="sub">
+        Телефоны говорят друг с другом напрямую по радио Wi-Fi, минуя интернет,
+        вышки и провайдера. Дальность — как у голоса через двор: десятки метров
+        в доме, до сотни на открытом месте. Дальше вас просто не слышно, и в этом
+        весь смысл.
+      </p>
+
+      <div class="two">
+        <article class="note">
+          <h3>Ничего не грузится</h3>
+          <p>Сообщение живёт в самом радиообъявлении. Ни аккаунтов на сервере, ни очередей, ни «нет сети».</p>
+        </article>
+        <article class="note">
+          <h3>Никто не платит</h3>
+          <p>Эфир ничей. Ни абонплаты, ни трафика, ни оператора, который может отключить.</p>
+        </article>
+        <article class="note">
+          <h3>Соседи, а не подписчики</h3>
+          <p>Вас слышат те, кто может прийти прямо сейчас. Аудитория набирается ногами.</p>
+        </article>
+        <article class="note">
+          <h3>Личное — только личное</h3>
+          <p>Записка шифруется ключом получателя и живёт в воздухе. На сервер не попадает вовсе.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="tishe">
+    <div class="wrap">
+      <p class="quote">
+        Мы привыкли, что сеть — это когда <span>слышно всех и всегда</span>.
+        Эфир устроен наоборот.
+      </p>
+      <p class="sub">Вот чего здесь нет — и не будет.</p>
+
+      <div class="two">
+        <article class="note no"><h3>Ленты рекомендаций</h3><p>Показывать нечего: у эфира нет «всех подряд», есть только те, кто рядом.</p></article>
+        <article class="note no"><h3>Поиска по людям</h3><p>Ни каталога, ни списка. Познакомиться можно, только оказавшись в радиусе приёма.</p></article>
+        <article class="note no"><h3>Регистрации по номеру</h3><p>Позывной и кодовое слово. Ни почты, ни телефона, ни имени.</p></article>
+        <article class="note no"><h3>Фотографий и файлов</h3><p>Только текст. Короткая записка читается за минуту и не превращается в архив.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap" style="text-align:center">
+      <h2>Посидите на эфире</h2>
+      <p class="sub" style="margin-inline:auto">
+        Бесплатно, без рекламы и покупок. Android. Работает и там, где связи нет вовсе.
+      </p>
+      <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+      <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>ЭФИР — автономный радиоинформатор</span>
+    <span><a href="https://radioinformator.ru">radioinformator.ru</a></span>
+  </div>
+</footer>
+
+<script>
+// Объявления приходят сами, неторопливо: страница про состояние, а не про спешку.
+(function () {
+  var feed = [
+    ['Кафе «Пар» · к2', 'Обед за 250 до 15:00, осталось четыре порции'],
+    ['Двор · к7', 'Отдам детскую коляску, второй подъезд'],
+    ['Рынок · к4', 'Привезли черешню, третий ряд от входа'],
+    ['Соседи · к9', 'В субботу чистим двор, сбор в десять'],
+    ['Тропа · к5', 'Стоянка у брода занята, идите выше'],
+    ['Двор · к11', 'Еду в центр в восемь, есть два места'],
+    ['Кафе «Пар» · к3', 'Скажите «эфир» — кофе за полцены']
+  ];
+  var log = document.getElementById('log');
+  var near = document.getElementById('near');
+  var i = 0;
+
+  function add() {
+    var item = feed[i % feed.length];
+    var el = document.createElement('div');
+    el.className = 'msg';
+    el.innerHTML = '<b>' + item[0] + '</b><span>' + item[1] + '</span>';
+    log.prepend(el);
+    while (log.children.length > 4) { log.lastElementChild.remove(); }
+    near.textContent = (2 + (i % 4)) + ' рядом';
+    i++;
+  }
+
+  add(); add();
+  setInterval(add, 3600);
+})();
+</script>
+</body>
+</html>

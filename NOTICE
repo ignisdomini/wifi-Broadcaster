@@ -1,0 +1,15 @@
+ЭФИР — радиоинформатор (wifi-Broadcaster)
+Copyright 2026 ignisdomini
+
+Продукт распространяется по лицензии Apache License 2.0.
+Полный текст — в файле LICENSE.
+
+Приложение использует стороннюю библиотеку:
+
+  Google Tink (com.google.crypto.tink)
+  Copyright Google LLC, лицензия Apache License 2.0
+  https://github.com/tink-crypto/tink
+
+Названия «RuStore», «Android» и «Wi-Fi Direct» принадлежат их владельцам и
+упоминаются исключительно для указания на совместимость. Фирменные знаки этих
+компаний в проекте не воспроизводятся.

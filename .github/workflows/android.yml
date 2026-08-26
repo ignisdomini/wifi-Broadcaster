@@ -1,0 +1,43 @@
+# Сборка и тесты на каждый push и pull request.
+#
+# Собирается только debug: релиз требует ключа подписи, а ключ в репозитории
+# не лежит и лежать не должен. Если понадобится подписанный CI-выпуск —
+# кладите хранилище и пароли в секреты репозитория и добавляйте шаг здесь.
+name: Сборка Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Тесты
+        run: ./gradlew testDebugUnitTest --no-daemon
+        working-directory: android
+
+      - name: Сборка debug
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+
+      - name: Сохранить APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: efir-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

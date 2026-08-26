@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Слушай эфир — ЭФИР, что говорят рядом с тобой</title>
+<meta name="description" content="Включи приём — и услышишь, что происходит в двух шагах: кафе, рынок, двор, тропа. Без интернета и вышек. Приложение ЭФИР.">
+<meta property="og:title" content="Слушай эфир">
+<meta property="og:description" content="Включи приём — и услышишь, что происходит в двух шагах.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23070B0A'/><rect x='5' y='14' width='3' height='6' rx='1.5' fill='%237CFFB2'/><rect x='11' y='9' width='3' height='16' rx='1.5' fill='%237CFFB2'/><rect x='17' y='12' width='3' height='10' rx='1.5' fill='%237CFFB2' opacity='.75'/><rect x='23' y='6' width='3' height='22' rx='1.5' fill='%237CFFB2' opacity='.5'/></svg>">
+<style>
+/* ============================================================
+   СЛУШАЙ ЭФИР — сайт про приём.
+
+   Здесь всё про то, что происходит без твоего участия: шкала
+   ходит, полосы уровня дышат, сообщения приходят сами. Человек
+   на этой странице — слушатель, поэтому единственное действие
+   на экране это тумблер приёма.
+   ============================================================ */
+
+:root{
+  --bg:#070B0A;
+  --panel:#0D1412;
+  --ink:#E6FFF2;
+  --soft:#7E9E90;
+  --signal:#7CFFB2;
+  --amber:#FFCF6B;
+  --alarm:#FF9BB0;
+  --line:#18241F;
+  --sans:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--signal)}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.5rem}
+
+header{position:sticky;top:0;z-index:40;background:rgba(7,11,10,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 0;gap:1rem}
+.logo{font-family:var(--mono);letter-spacing:.22em;font-size:.9rem;font-weight:700;color:var(--signal)}
+.head nav{display:flex;gap:1.3rem;font-size:.9rem}
+.head nav a{color:var(--soft);text-decoration:none}
+.head nav a:hover{color:var(--signal)}
+@media(max-width:640px){.head nav{display:none}}
+
+/* padding-block, а не padding: сокращённая запись затирала боковые поля .wrap. */
+.hero{padding-block:4.5rem 3rem;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:2.2rem}}
+
+h1{font-size:clamp(2.3rem,6.5vw,4.4rem);line-height:1.03;margin:0 0 1rem;letter-spacing:-.035em;font-weight:800}
+h1 em{font-style:normal;color:var(--signal)}
+.lead{color:var(--soft);font-size:1.08rem;max-width:32rem;margin:0 0 1.9rem}
+.actions{display:flex;gap:.7rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--signal);color:#052616;font-weight:700;padding:.9rem 1.9rem;border-radius:100px;text-decoration:none}
+.btn:hover{background:#9DFFC7}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:transparent;border-color:var(--signal);color:var(--signal)}
+
+/* ---------- приёмник ---------- */
+.radio{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:1.1rem;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+
+.bar{display:flex;align-items:center;gap:.8rem;padding:.2rem .3rem .9rem;border-bottom:1px solid var(--line)}
+.sw{
+  width:52px;height:28px;border-radius:100px;background:#1E2C26;position:relative;cursor:pointer;
+  border:1px solid var(--line);transition:background .2s ease;flex:0 0 auto;
+}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#4A6357;transition:transform .2s ease,background .2s ease}
+.sw.on{background:rgba(124,255,178,.22);border-color:var(--signal)}
+.sw.on::after{transform:translateX(24px);background:var(--signal)}
+.bar b{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);font-weight:700}
+.bar .st{margin-left:auto;font-family:var(--mono);font-size:.74rem;color:var(--signal)}
+
+/* Полосы уровня: у каждой своя длительность, поэтому рисунок не повторяется. */
+.levels{display:flex;align-items:flex-end;gap:4px;height:46px;padding:.9rem .3rem .6rem}
+.levels i{flex:1;background:linear-gradient(180deg,var(--signal),rgba(124,255,178,.25));border-radius:3px;height:20%;animation:jump 1.1s ease-in-out infinite alternate}
+@keyframes jump{to{height:100%}}
+.levels.off i{animation-play-state:paused;height:12%;background:#22322B}
+
+.feed{display:grid;gap:.55rem;min-height:15rem;align-content:start;padding-top:.4rem}
+.item{
+  border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:11px;
+  padding:.6rem .8rem;background:var(--bg);animation:in .4s ease both;
+}
+.item.alarm{border-left-color:var(--alarm)}
+@keyframes in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.item b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--signal)}
+.item.alarm b{color:var(--alarm)}
+.item span{font-size:.95rem}
+.empty{color:var(--soft);font-family:var(--mono);font-size:.85rem;text-align:center;padding:3rem 0}
+
+section{padding:4.2rem 0}
+.alt{background:var(--panel);border-block:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--signal);margin:0 0 .7rem}
+h2{font-size:clamp(1.6rem,4.2vw,2.5rem);line-height:1.13;margin:0 0 .9rem;letter-spacing:-.02em;font-weight:800}
+.sub{color:var(--soft);max-width:38rem;margin:0 0 2.2rem}
+
+.chans{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.7rem}
+.chan{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);border-radius:12px;padding:.7rem .9rem;background:var(--bg);transition:border-color .2s ease}
+.alt .chan{background:var(--panel)}
+.chan:hover{border-color:var(--signal)}
+.chan code{font-family:var(--mono);font-size:.72rem;color:var(--soft)}
+.chan.alarm{border-color:rgba(255,155,176,.5)}
+.chan.alarm span{color:var(--alarm)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.3rem}
+.alt .card{background:var(--bg)}
+.card h3{margin:0 0 .4rem;font-size:1.02rem}
+.card p{margin:0;color:var(--soft);font-size:.94rem}
+
+/* ---------- кнопка магазина ---------- */
+/* Бейдж в духе магазинных: значок слева, две строки. Значок наш, нейтральный —
+   фирменный знак RuStore рисовать по памяти нельзя. */
+.store{display:inline-flex;align-items:center;gap:.7rem;background:#7CFFB2;color:#052616;
+  border:1px solid #7CFFB2;border-radius:14px;padding:.6rem 1.25rem .6rem 1rem;
+  text-decoration:none;transition:transform .16s ease,filter .16s ease}
+.store:hover{text-decoration:none;color:#052616;transform:translateY(-1px);filter:brightness(1.08)}
+.store-i{width:26px;height:26px;flex:0 0 auto}
+.store span{display:grid;line-height:1.15;font-weight:700;font-size:1.05rem}
+.store b{font-weight:500;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.72}
+
+footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--soft);font-size:.85rem}
+.foot{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between}
+
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <div class="logo">))) ЭФИР</div>
+    <nav>
+      <a href="#chto">Что слышно</a>
+      <a href="#kanaly">Каналы</a>
+      <a href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener">Скачать</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <div>
+      <h1>Слушай <em>эфир</em></h1>
+      <p class="lead">
+        Включи приём — и услышишь, что происходит в двух шагах: где сегодня
+        обед за полцены, что привезли на рынок, кто идёт по той же тропе.
+        Ничего не грузится: сообщения приходят прямо из воздуха.
+      </p>
+      <div class="actions">
+        <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+        <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+        <a class="btn btn-ghost" href="#chto">Что там слышно</a>
+      </div>
+    </div>
+
+    <div class="radio">
+      <div class="bar">
+        <span class="sw on" id="sw" role="switch" aria-checked="true" aria-label="Приём"></span>
+        <b>Приём</b>
+        <span class="st" id="st">каналов: 3</span>
+      </div>
+      <div class="levels" id="levels"></div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+
+  <section id="chto" class="alt">
+    <div class="wrap">
+      <p class="eyebrow">Что слышно</p>
+      <h2>Новости, которые важны только здесь</h2>
+      <p class="sub">
+        Их не будет ни в одной ленте: они слишком мелкие для интернета и слишком
+        важные для того, кто стоит рядом.
+      </p>
+      <div class="grid">
+        <article class="card"><h3>За углом</h3><p>«Осталось четыре порции», «привезли черешню», «работаем до девяти».</p></article>
+        <article class="card"><h3>Во дворе</h3><p>«Отдам коляску», «в субботу чистим двор», «еду в центр, два места».</p></article>
+        <article class="card"><h3>На тропе</h3><p>«Стоянка занята», «брод выше по течению», «идём к перевалу».</p></article>
+        <article class="card"><h3>В беде</h3><p>Тревожный канал слушают все и всегда — его нельзя случайно отключить.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="kanaly">
+    <div class="wrap">
+      <p class="eyebrow">Каналы</p>
+      <h2>Слушай что хочешь — хоть всё сразу</h2>
+      <p class="sub">
+        Шестнадцать тем. Отметил галочками нужные — и слышишь только их.
+        Тревожный шестой остаётся в наборе всегда.
+      </p>
+      <div class="chans">
+        <div class="chan"><code>к1</code><span>Общий</span></div>
+        <div class="chan"><code>к2</code><span>Еда и кафе</span></div>
+        <div class="chan"><code>к3</code><span>Скидки и промокоды</span></div>
+        <div class="chan"><code>к4</code><span>Рынок и торговля</span></div>
+        <div class="chan"><code>к5</code><span>Туризм и походы</span></div>
+        <div class="chan alarm"><code>к6</code><span>Тревога</span></div>
+        <div class="chan"><code>к7</code><span>Объявления</span></div>
+        <div class="chan"><code>к8</code><span>Знакомства</span></div>
+        <div class="chan"><code>к9</code><span>Сообщества</span></div>
+        <div class="chan"><code>к10</code><span>События</span></div>
+        <div class="chan"><code>к11</code><span>Транспорт</span></div>
+        <div class="chan"><code>к12</code><span>Работа</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap" style="text-align:center">
+      <h2>Включите приём</h2>
+      <p class="sub" style="margin-inline:auto">
+        Бесплатно, без рекламы. Работает при погасшем экране — телефон слышит
+        эфир из кармана.
+      </p>
+      <a class="store" href="https://www.rustore.ru/catalog/app/ru.radioinformator.efir" target="_blank" rel="noopener"><svg class="store-i" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v8m0 0 3.2-3.2M12 15l-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Доступно в</b>RuStore</span></a>
+      <a class="btn btn-ghost" href="https://radioinformator.ru">Скачать с сайта</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>ЭФИР — автономный радиоинформатор</span>
+    <span><a href="https://radioinformator.ru">radioinformator.ru</a></span>
+  </div>
+</footer>
+
+<script>
+// Полосы уровня: разная длительность у каждой, иначе рисунок отбивает такт.
+(function () {
+  var box = document.getElementById('levels');
+  for (var i = 0; i < 26; i++) {
+    var bar = document.createElement('i');
+    bar.style.animationDuration = (0.5 + Math.random() * 0.9).toFixed(2) + 's';
+    bar.style.animationDelay = (-Math.random() * 1.2).toFixed(2) + 's';
+    box.appendChild(bar);
+  }
+})();
+
+// Эфир: сообщения приходят сами, пока приём включён.
+(function () {
+  var air = [
+    ['Кафе «Пар» · к2', 'Обед за 250 до 15:00, осталось четыре порции', 0],
+    ['Рынок · к4', 'Привезли черешню, третий ряд от входа', 0],
+    ['Двор · к7', 'Отдам детскую коляску, второй подъезд', 0],
+    ['Тропа · к5', 'Стоянка у брода занята, идите выше', 0],
+    ['Спасатели · к6', 'Потерялся мальчик 6 лет, синяя куртка', 1],
+    ['Ярмарка · к10', 'Концерт во дворе через час, вход свободный', 0],
+    ['Гараж · к11', 'Еду в центр в восемь, есть два места', 0]
+  ];
+
+  var feed = document.getElementById('feed');
+  var sw = document.getElementById('sw');
+  var st = document.getElementById('st');
+  var levels = document.getElementById('levels');
+  var on = true, i = 0, timer = null;
+
+  function add() {
+    var m = air[i % air.length];
+    var el = document.createElement('div');
+    el.className = 'item' + (m[2] ? ' alarm' : '');
+    el.innerHTML = '<b>' + m[0] + '</b><span>' + m[1] + '</span>';
+    feed.prepend(el);
+    while (feed.children.length > 4) { feed.lastElementChild.remove(); }
+    i++;
+  }
+
+  function start() {
+    feed.innerHTML = '';
+    add(); add();
+    timer = setInterval(add, 3200);
+  }
+
+  function stop() {
+    clearInterval(timer);
+    feed.innerHTML = '<p class="empty">приём выключен — в эфире тишина</p>';
+  }
+
+  sw.addEventListener('click', function () {
+    on = !on;
+    sw.classList.toggle('on', on);
+    sw.setAttribute('aria-checked', String(on));
+    levels.classList.toggle('off', !on);
+    st.textContent = on ? 'каналов: 3' : 'выключен';
+    if (on) { start(); } else { stop(); }
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>

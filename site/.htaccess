@@ -1,0 +1,33 @@
+# ЭФИР — правила для Apache на обычном хостинге.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Короткие ссылки: /p/k7m2q -> p.php?c=k7m2q
+    RewriteRule ^p/([A-Za-z0-9]{3,16})/?$ p.php?c=$1 [L,QSA]
+
+    # Личные ленты: /u/КОД -> u.php?u=КОД
+    RewriteRule ^u/([A-Za-z0-9]{3,24})/?$ u.php?u=$1 [L,QSA]
+</IfModule>
+
+# Сборка приложения. Без явного типа некоторые хостинги отдают APK как
+# text/plain, и браузер открывает его вместо загрузки.
+<IfModule mod_mime.c>
+    AddType application/vnd.android.package-archive .apk
+</IfModule>
+
+# Служебные каталоги наружу не отдаём.
+RedirectMatch 404 ^/lib/
+RedirectMatch 404 ^/partials/
+RedirectMatch 404 ^/config\.php$
+RedirectMatch 404 ^/schema\.sql$
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>

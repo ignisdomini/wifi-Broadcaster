@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 9+ по умолчанию запрещает обычный HTTP. Боевой сайт ЭФИРа живёт на
+    https, поэтому общий запрет оставлен в силе. Исключения — только адреса
+    локальной отладки: localhost и 10.0.2.2 («компьютер» с точки зрения
+    эмулятора). Если сервер поднят в локальной сети по IP, добавьте его домен
+    сюда отдельной строкой — глобально cleartext не включаем.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

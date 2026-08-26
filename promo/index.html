@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Промо-сайты ЭФИРа</title>
+<meta name="robots" content="noindex">
+<style>
+/* Служебная страница для просмотра всех пяти сразу. На домены не заливается. */
+:root{--bg:#0B0E12;--panel:#131820;--ink:#E9F0F5;--soft:#8FA1B0;--line:#1E2632;--acc:#7CFFB2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.6}
+.wrap{max-width:60rem;margin:0 auto;padding:3rem 1.5rem}
+h1{font-size:1.8rem;margin:0 0 .4rem;letter-spacing:-.02em}
+.sub{color:var(--soft);margin:0 0 2rem}
+.list{display:grid;gap:.8rem}
+a.site{
+  display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:1rem 1.2rem;text-decoration:none;color:inherit;transition:border-color .2s ease,transform .2s ease;
+}
+a.site:hover{border-color:var(--acc);transform:translateX(3px)}
+.sw{width:2.6rem;height:2.6rem;border-radius:9px;display:grid;place-items:center;font-size:1.2rem}
+.site b{display:block;font-size:1.02rem}
+.site small{color:var(--soft);font-size:.86rem}
+.site code{font-family:"SFMono-Regular",Consolas,monospace;font-size:.78rem;color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Промо-сайты ЭФИРа</h1>
+  <p class="sub">Пять одностраничников, по одному на домен. Каждая папка заливается в корень своего сайта.</p>
+
+  <div class="list">
+    <a class="site" href="budvefire/">
+      <span class="sw" style="background:#2A120A">📣</span>
+      <span><b>Будь в эфире!</b><small>Призыв. Кнопка-рупор, от неё расходятся волны.</small></span>
+      <code>budvefire.ru</code>
+    </a>
+    <a class="site" href="naefire/">
+      <span class="sw" style="background:#2B2214">🛋</span>
+      <span><b>Сижу на эфире</b><small>Состояние. Тёплая бумага, лампа дышит, объявления приходят сами.</small></span>
+      <code>naefire.ru</code>
+    </a>
+    <a class="site" href="pishivefir/">
+      <span class="sw" style="background:#0F2A24">⌨</span>
+      <span><b>Пиши в эфир</b><small>Строка. Поле печатает само, счётчик байтов как в приложении.</small></span>
+      <code>pishivefir.ru</code>
+    </a>
+    <a class="site" href="slushaiefir/">
+      <span class="sw" style="background:#0D2019">))) </span>
+      <span><b>Слушай эфир</b><small>Приём. Живая шкала уровня и тумблер, который правда выключает эфир.</small></span>
+      <code>slushaiefir.ru</code>
+    </a>
+    <a class="site" href="yavefire/">
+      <span class="sw" style="background:#1F1440">◉</span>
+      <span><b>Я в эфире</b><small>Присутствие. Карточка позывного с кругами охвата.</small></span>
+      <code>yavefire.ru</code>
+    </a>
+  </div>
+</div>
+</body>
+</html>

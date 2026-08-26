@@ -1,0 +1,11 @@
+# Перевод строк в репозитории всегда LF: проект живёт на Windows, а собирается
+# в том числе на Linux, и без этого diff превращается в кашу.
+* text=auto eol=lf
+
+*.bat        text eol=crlf
+*.jks        binary
+*.keystore   binary
+*.apk        binary
+*.png        binary
+*.jpg        binary
+*.zip        binary
