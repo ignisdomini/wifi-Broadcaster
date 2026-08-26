@@ -2,8 +2,9 @@ package ru.radioinformator.efir.ui
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,25 +14,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,11 +39,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.radioinformator.efir.model.EfirMessage
@@ -69,49 +68,35 @@ fun JournalScreen(
     onClear: () -> Unit,
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
-    val stampFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale("ru")) }
+    val stampFormat = remember { SimpleDateFormat("dd.MM.yyyy · HH:mm:ss", Locale("ru")) }
     val context = LocalContext.current
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    EfirBackdrop(alive = false, modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Назад",
-                                tint = EfirGreen,
+                Box(Modifier.statusBarsPadding()) {
+                    EfirScreenHeader(
+                        title = "Журнал",
+                        subtitle = if (entries.isEmpty()) {
+                            "записей пока нет"
+                        } else {
+                            "записей: ${entries.size}"
+                        },
+                        onBack = onBack,
+                        accent = EfirSky,
+                    ) {
+                        if (entries.isNotEmpty()) {
+                            GlowIconButton(
+                                icon = Icons.Filled.DeleteSweep,
+                                description = "Очистить журнал",
+                                tint = EfirRose,
+                                onClick = { confirmClear = true },
+                                size = 40.dp,
                             )
                         }
-                    },
-                    title = {
-                        Text(
-                            text = "ЖУРНАЛ",
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp,
-                            fontSize = 16.sp,
-                        )
-                    },
-                    actions = {
-                        if (entries.isNotEmpty()) {
-                            TextButton(onClick = { confirmClear = true }) {
-                                Text(
-                                    "очистить",
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    color = EfirRose,
-                                )
-                            }
-                        }
-                    },
-                )
+                    }
+                }
             },
         ) { padding ->
             if (entries.isEmpty()) {
@@ -119,15 +104,37 @@ fun JournalScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(32.dp),
+                        .padding(horizontal = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    Spacer(Modifier.height(80.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(74.dp)
+                            .halo(EfirSky, alpha = 0.20f, spread = 1.6f)
+                            .glass(EfirCardShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = null,
+                            tint = EfirSky,
+                            modifier = Modifier.size(30.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(18.dp))
                     Text(
-                        text = "ПОКА ПУСТО\n\nСюда попадает всё принятое из эфира —\n" +
-                            "с датой, временем и каналом.\nЗаписи остаются после перезапуска.",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
+                        text = "Пока пусто",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Сюда попадает всё принятое из эфира — с датой, временем " +
+                            "и каналом. Записи остаются после перезапуска.",
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -139,6 +146,8 @@ fun JournalScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items = entries, key = { it.id }) { entry ->
                     JournalRow(
@@ -155,8 +164,8 @@ fun JournalScreen(
                         },
                         canOpenFeed = entry.profileCode?.let(profileResolver) != null,
                         onDelete = { onDelete(entry.id) },
+                        modifier = Modifier.animateItem(),
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 }
             }
         }
@@ -167,13 +176,15 @@ fun JournalScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("Очистить журнал?", fontFamily = FontFamily.Monospace, fontSize = 15.sp) },
+            title = {
+                Text("Очистить журнал?", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            },
             text = {
                 Text(
                     text = "Все ${entries.size} записей будут стёрты. Восстановить их " +
                         "неоткуда — в эфире этих сообщений уже нет.",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
@@ -182,13 +193,11 @@ fun JournalScreen(
                     onClear()
                     confirmClear = false
                 }) {
-                    Text("Стереть", fontFamily = FontFamily.Monospace, color = EfirRose)
+                    Text("Стереть", color = EfirRose, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) {
-                    Text("Отмена", fontFamily = FontFamily.Monospace)
-                }
+                TextButton(onClick = { confirmClear = false }) { Text("Отмена") }
             },
         )
     }
@@ -202,82 +211,86 @@ private fun JournalRow(
     onOpenFeed: () -> Unit,
     canOpenFeed: Boolean,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val accent = if (entry.isDirect) EfirAmber else EfirSky
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(scheme.background)
-            .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.Top,
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        glow = if (entry.isDirect) EfirAmber else null,
+        glowAlpha = 0.10f,
     ) {
-        Column(Modifier.weight(1f)) {
-            if (entry.isDirect) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 4.dp),
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HandleAvatar(handle = entry.nick, color = accent, size = 32.dp)
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    // Позывной ведёт в ленту автора: код пришёл из эфира,
+                    // другого пути к чужой ленте в сети нет.
+                    Text(
+                        text = entry.nick.uppercase(Locale("ru")),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (canOpenFeed) {
+                            Modifier.clickable(onClick = onOpenFeed)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    Text(
+                        text = stamp,
+                        fontFamily = EfirMono,
+                        fontSize = 11.sp,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable(onClick = onDelete),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        Icons.Filled.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(11.dp),
-                        tint = scheme.secondary,
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(
-                        text = "ЛИЧНОЕ СООБЩЕНИЕ",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        color = scheme.secondary,
+                        Icons.Filled.Close,
+                        contentDescription = "Удалить запись",
+                        modifier = Modifier.size(16.dp),
+                        tint = scheme.onSurfaceVariant,
                     )
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Ник ведёт в ленту автора: код пришёл из эфира, другого пути нет.
-                Text(
-                    text = entry.nick.uppercase(Locale("ru")),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (canOpenFeed) EfirSky else scheme.primary,
-                    textDecoration = if (canOpenFeed) TextDecoration.Underline else null,
-                    modifier = if (canOpenFeed) Modifier.clickable(onClick = onOpenFeed) else Modifier,
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EfirTag(
+                    text = "к${entry.channel} · ${channelTitle(entry.channel)}",
+                    color = EfirGreen,
                 )
+                if (entry.isDirect) {
+                    EfirTag(
+                        text = "личное",
+                        color = EfirAmber,
+                        icon = Icons.Filled.Lock,
+                        solid = true,
+                    )
+                }
+                if (canOpenFeed) {
+                    EfirTag(text = "лента", color = EfirSky, icon = Icons.Filled.Badge)
+                }
             }
 
-            Text(
-                text = "к${entry.channel} · ${channelTitle(entry.channel)}",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-            Text(
-                text = stamp,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                color = scheme.onSurfaceVariant,
-            )
-            Text(
-                text = entry.text,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                color = scheme.onSurface,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = "Удалить запись",
-                modifier = Modifier.size(16.dp),
-                tint = EfirRose,
-            )
+            if (entry.text.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = entry.text,
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    color = scheme.onSurface,
+                )
+            }
         }
     }
 }

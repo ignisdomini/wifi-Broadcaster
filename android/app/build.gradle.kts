@@ -27,8 +27,8 @@ android {
         applicationId = "ru.radioinformator.efir"
         minSdk = 21
         targetSdk = 34
-        versionCode = 12
-        versionName = "2.4"
+        versionCode = 13
+        versionName = "2.5"
 
         // Адрес сети по умолчанию. Пользователь может сменить его в настройках
         // приложения; короткие ссылки собираются из сохранённого значения.

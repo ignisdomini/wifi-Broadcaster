@@ -4,10 +4,18 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import ru.radioinformator.efir.ui.EfirTileShape
+import ru.radioinformator.efir.ui.EfirSectionLabel
+import ru.radioinformator.efir.ui.EfirInk
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,6 +114,38 @@ import ru.radioinformator.efir.model.SiteStatus
 import ru.radioinformator.efir.net.EfirPrefs
 import ru.radioinformator.efir.p2p.EfirPermissions
 import ru.radioinformator.efir.p2p.TxtRecordCodec
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import ru.radioinformator.efir.ui.EfirBackdrop
+import ru.radioinformator.efir.ui.EfirChipShape
+import ru.radioinformator.efir.ui.EfirHairline
+import ru.radioinformator.efir.ui.EfirMono
+import ru.radioinformator.efir.ui.EfirMuted
+import ru.radioinformator.efir.ui.EfirSans
+import ru.radioinformator.efir.ui.EfirSwitch
+import ru.radioinformator.efir.ui.EfirTag
+import ru.radioinformator.efir.ui.GlassCard
+import ru.radioinformator.efir.ui.GlowActionButton
+import ru.radioinformator.efir.ui.GlowChipButton
+import ru.radioinformator.efir.ui.GlowIconButton
+import ru.radioinformator.efir.ui.HandleAvatar
+import ru.radioinformator.efir.ui.PulseDot
+import ru.radioinformator.efir.ui.glass
+import ru.radioinformator.efir.ui.halo
 import ru.radioinformator.efir.ui.EfirAmber
 import ru.radioinformator.efir.ui.EfirGreen
 import ru.radioinformator.efir.ui.EfirLilac
@@ -124,6 +164,12 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Сквозной режим: подложка со свечением уходит под системные панели,
+        // иначе сверху и снизу остаются чёрные полосы поперёк градиента.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         setContent {
             EfirTheme {
@@ -213,6 +259,11 @@ fun EfirScreen() {
 
     // Журнал и расписание занимают весь экран: в них листают и правят, а
     // окошко поверх ленты для этого тесное.
+    // Системный «назад» на внутреннем экране должен возвращать в ленту, а
+    // не закрывать приложение: журнал и расписание — это разделы, а не
+    // отдельные входы.
+    BackHandler(enabled = screen != Screen.MAIN) { screen = Screen.MAIN }
+
     when (screen) {
         Screen.JOURNAL -> {
             JournalScreen(
@@ -283,161 +334,119 @@ fun EfirScreen() {
         return
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                ),
-                title = {
-                    Text(
-                        text = "ЭФИР",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 6.sp,
-                        fontSize = 18.sp,
-                    )
-                },
-                actions = {
-                    // Каждой кнопке свой цвет: иконок немного, и так они
-                    // различаются с одного взгляда, без вчитывания.
-                    ToolbarIcon(
-                        icon = Icons.Filled.Lock,
-                        description = "Написать лично",
-                        tint = EfirAmber,
-                        enabled = state.canUseRadio,
-                        onClick = { showDirect = true },
-                    )
-                    ToolbarIcon(
-                        icon = Icons.Filled.Badge,
-                        description = "Моя лента",
-                        tint = EfirGreen,
-                        enabled = state.profileCode.isNotBlank(),
-                        onClick = {
-                            radio.loadMyFeed()
-                            showFeed = true
+    EfirBackdrop(
+        alive = state.isScanning || state.isBroadcasting,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Scaffold(
+            // Фон рисует подложка со свечением, поэтому сам каркас прозрачен.
+            containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                EfirHeader(
+                    state = state,
+                    onDirect = { showDirect = true },
+                    onFeed = {
+                        radio.loadMyFeed()
+                        showFeed = true
+                    },
+                    onContacts = { screen = Screen.CONTACTS },
+                    onJournal = { screen = Screen.JOURNAL },
+                    onSchedule = { screen = Screen.SCHEDULE },
+                    onSettings = { showSettings = true },
+                )
+            },
+            bottomBar = {
+                TransmitBar(
+                    state = state,
+                    draft = draft,
+                    onDraftChange = { draft = it },
+                    onAttach = { showAttach = true },
+                    onSend = {
+                        radio.transmit(draft)
+                        draft = ""
+                        keyboard?.hide()
+                    },
+                    onStop = { radio.stopTransmitting() },
+                )
+            },
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                Spacer(Modifier.height(6.dp))
+                ControlCard(
+                    state = state,
+                    onToggleScan = { radio.toggleScanning() },
+                    onToggleKeepScreenOn = radio::setKeepScreenOn,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                if (!state.permissionsGranted && EfirPermissions.required().isNotEmpty()) {
+                    NoticeCard(
+                        title = "Нужно разрешение",
+                        body = "«Устройства поблизости» на Android 13 и новее или точная " +
+                            "геолокация на Android 12 и старше — без этого чужие передачи не видны.",
+                        actionLabel = "Разрешить",
+                        onAction = {
+                            permissionLauncher.launch(EfirPermissions.required().toTypedArray())
                         },
                     )
-                    ToolbarIcon(
-                        icon = Icons.Filled.ContactPage,
-                        description = "Визитка",
-                        tint = EfirPeach,
-                        enabled = state.profileCode.isNotBlank(),
-                        onClick = { screen = Screen.CONTACTS },
-                    )
-                    ToolbarIcon(
-                        icon = Icons.Filled.History,
-                        description = "Журнал",
-                        tint = EfirSky,
-                        onClick = { screen = Screen.JOURNAL },
-                    )
-                    ToolbarIcon(
-                        icon = Icons.Filled.Schedule,
-                        description = "Расписание",
-                        tint = EfirRose,
-                        onClick = { screen = Screen.SCHEDULE },
-                    )
-                    ToolbarIcon(
-                        icon = Icons.Filled.Settings,
-                        description = "Настройки",
-                        tint = EfirLilac,
-                        onClick = { showSettings = true },
-                    )
-                },
-            )
-        },
-        bottomBar = {
-            TransmitBar(
-                state = state,
-                draft = draft,
-                onDraftChange = { draft = it },
-                onAttach = { showAttach = true },
-                onSend = {
-                    radio.transmit(draft)
-                    draft = ""
-                    keyboard?.hide()
-                },
-                onStop = { radio.stopTransmitting() },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            ScanBar(
-                state = state,
-                onToggle = { radio.toggleScanning() },
-                onToggleKeepScreenOn = radio::setKeepScreenOn,
-            )
-            StatusStrip(state)
+                }
 
-            if (!state.permissionsGranted && EfirPermissions.required().isNotEmpty()) {
-                NoticeCard(
-                    title = "Нужно разрешение",
-                    body = "«Устройства поблизости» на Android 13 и новее или точная " +
-                        "геолокация на Android 12 и старше — без этого чужие передачи не видны.",
-                    actionLabel = "Разрешить",
-                    onAction = {
-                        permissionLauncher.launch(EfirPermissions.required().toTypedArray())
+                if (state.locationServicesRequired && !state.locationServicesEnabled) {
+                    NoticeCard(
+                        title = "Геолокация выключена",
+                        body = "До Android 13 системный тумблер геолокации управляет и поиском " +
+                            "по Wi-Fi. С выключенным приём молча не приносит ничего.",
+                        actionLabel = "Открыть настройки",
+                        onAction = { context.startActivity(EfirPermissions.locationSettingsIntent()) },
+                    )
+                }
+
+                if (state.p2pState == P2pState.DISABLED) {
+                    NoticeCard(
+                        title = "Wi-Fi выключен",
+                        body = "Wi-Fi Direct живёт на том же радио. Подключаться к сети не нужно — " +
+                            "достаточно, чтобы модуль был включён.",
+                        actionLabel = "Открыть Wi-Fi",
+                        onAction = { context.startActivity(EfirPermissions.wifiSettingsIntent()) },
+                    )
+                }
+
+                // Совет, выполнение которого не проверить: на Xiaomi «Без
+                // ограничений» и «Автозапуск» живут в своей подсистеме, и
+                // системный признак экономии после них не меняется. Поэтому
+                // карточка убирается вручную и больше не возвращается.
+                if (state.batteryRestricted && !state.batteryNoticeHidden) {
+                    NoticeCard(
+                        title = "Телефон усыпит приём",
+                        body = "Чтобы эфир слышался с погасшим экраном, откройте «Батарея» " +
+                            "и выберите «Без ограничений». На Xiaomi там же включите " +
+                            "«Автозапуск», иначе система остановит приём через несколько минут.",
+                        actionLabel = "Открыть настройки",
+                        onAction = {
+                            context.startActivity(EfirPermissions.batterySettingsIntent(context))
+                        },
+                        onDismiss = radio::hideBatteryNotice,
+                    )
+                }
+
+                MessageList(
+                    messages = state.messages,
+                    contacts = state.contacts,
+                    channelTitle = state::channelTitle,
+                    linkResolver = radio::linkFor,
+                    profileResolver = radio::profileLinkFor,
+                    onWriteTo = { handle ->
+                        directTo = handle
+                        showDirect = true
                     },
+                    modifier = Modifier.weight(1f),
                 )
             }
-
-            if (state.locationServicesRequired && !state.locationServicesEnabled) {
-                NoticeCard(
-                    title = "Геолокация выключена",
-                    body = "До Android 13 системный тумблер геолокации управляет и поиском " +
-                        "по Wi-Fi. С выключенным приём молча не приносит ничего.",
-                    actionLabel = "Открыть настройки",
-                    onAction = { context.startActivity(EfirPermissions.locationSettingsIntent()) },
-                )
-            }
-
-            if (state.p2pState == P2pState.DISABLED) {
-                NoticeCard(
-                    title = "Wi-Fi выключен",
-                    body = "Wi-Fi Direct живёт на том же радио. Подключаться к сети не нужно — " +
-                        "достаточно, чтобы модуль был включён.",
-                    actionLabel = "Открыть Wi-Fi",
-                    onAction = { context.startActivity(EfirPermissions.wifiSettingsIntent()) },
-                )
-            }
-
-            // Совет, выполнение которого не проверить: на Xiaomi «Без
-            // ограничений» и «Автозапуск» живут в своей подсистеме, и
-            // системный признак экономии после них не меняется. Поэтому
-            // карточка убирается вручную и больше не возвращается.
-            if (state.batteryRestricted && !state.batteryNoticeHidden) {
-                NoticeCard(
-                    title = "Телефон усыпит приём",
-                    body = "Чтобы эфир слышался с погасшим экраном, откройте «Батарея» " +
-                        "и выберите «Без ограничений». На Xiaomi там же включите " +
-                        "«Автозапуск», иначе система остановит приём через несколько минут.",
-                    actionLabel = "Открыть настройки",
-                    onAction = {
-                        context.startActivity(EfirPermissions.batterySettingsIntent(context))
-                    },
-                    onDismiss = radio::hideBatteryNotice,
-                )
-            }
-
-            MessageList(
-                messages = state.messages,
-                contacts = state.contacts,
-                channelTitle = state::channelTitle,
-                linkResolver = radio::linkFor,
-                profileResolver = radio::profileLinkFor,
-                onWriteTo = { handle ->
-                    directTo = handle
-                    showDirect = true
-                },
-                modifier = Modifier.weight(1f),
-            )
         }
     }
 
@@ -520,156 +529,236 @@ fun EfirScreen() {
     }
 }
 
-/* ------------------------------------------------------------------ строка состояния */
+/* ------------------------------------------------------------------ шапка */
 
 /**
- * Кнопка верхнего меню со своим цветом и, при надобности, счётчиком.
+ * Шапка главного экрана: марка, живая строка состояния и ряд круглых
+ * кнопок. Раньше здесь был системный TopAppBar, и шесть иконок рядом
+ * с заголовком стояли впритык — теперь у каждой своё стекло и воздух.
  */
 @Composable
-private fun ToolbarIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    description: String,
-    tint: Color,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    badge: Int = 0,
+private fun EfirHeader(
+    state: EfirUiState,
+    onDirect: () -> Unit,
+    onFeed: () -> Unit,
+    onContacts: () -> Unit,
+    onJournal: () -> Unit,
+    onSchedule: () -> Unit,
+    onSettings: () -> Unit,
 ) {
-    Box {
-        IconButton(onClick = onClick, enabled = enabled) {
-            Icon(
-                imageVector = icon,
-                contentDescription = description,
-                tint = if (enabled) tint else tint.copy(alpha = 0.28f),
-            )
-        }
-        if (badge > 0) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = if (badge > 99) "99+" else badge.toString(),
-                fontFamily = FontFamily.Monospace,
-                fontSize = 8.sp,
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 4.dp, end = 2.dp)
-                    .background(tint, CircleShape)
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                text = "ЭФИР",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 5.sp,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.halo(EfirGreen, alpha = 0.18f, spread = 1.1f),
+            )
+            Spacer(Modifier.weight(1f))
+            LiveStatusPill(state)
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GlowIconButton(
+                icon = Icons.Filled.Lock,
+                description = "Написать лично",
+                tint = EfirAmber,
+                enabled = state.canUseRadio,
+                onClick = onDirect,
+            )
+            GlowIconButton(
+                icon = Icons.Filled.Badge,
+                description = "Моя лента",
+                tint = EfirGreen,
+                enabled = state.profileCode.isNotBlank(),
+                onClick = onFeed,
+            )
+            GlowIconButton(
+                icon = Icons.Filled.ContactPage,
+                description = "Визитка",
+                tint = EfirPeach,
+                enabled = state.profileCode.isNotBlank(),
+                onClick = onContacts,
+            )
+            GlowIconButton(
+                icon = Icons.Filled.History,
+                description = "Журнал",
+                tint = EfirSky,
+                onClick = onJournal,
+            )
+            GlowIconButton(
+                icon = Icons.Filled.Schedule,
+                description = "Расписание",
+                tint = EfirRose,
+                highlighted = state.schedule.enabled,
+                onClick = onSchedule,
+            )
+            GlowIconButton(
+                icon = Icons.Filled.Settings,
+                description = "Настройки",
+                tint = EfirLilac,
+                onClick = onSettings,
             )
         }
     }
 }
 
 /**
- * Переключатель приёма вынесен в собственную строку: это главное действие
- * экрана, и в тесноте верхнего меню оно терялось среди иконок.
+ * Капсула состояния: дышащая точка и одна строка. Это всё, что нужно
+ * знать не глядя — идёт ли передача и сколько устройств рядом.
  */
 @Composable
-private fun ScanBar(
+private fun LiveStatusPill(state: EfirUiState) {
+    val live = state.isBroadcasting
+    val color = if (live) EfirGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .glass(EfirChipShape, fill = 0.05f, stroke = if (live) 0.18f else 0.08f)
+            .padding(horizontal = 11.dp, vertical = 7.dp),
+    ) {
+        PulseDot(active = live, color = if (live) EfirGreen else EfirMuted, size = 8.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = if (live) "в эфире · к${state.transmitChannel}" else "молчу",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .size(3.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "${state.peersSeen} рядом",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/* ------------------------------------------------------------------ управление */
+
+/**
+ * Карточка управления. Приём — главное действие экрана, поэтому он
+ * занимает целую строку с подписью о том, что именно слушаем, а не
+ * ютится тумблером в углу.
+ */
+@Composable
+private fun ControlCard(
     state: EfirUiState,
-    onToggle: () -> Unit,
+    onToggleScan: () -> Unit,
     onToggleKeepScreenOn: (Boolean) -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    Row(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .background(scheme.surface)
-            .padding(start = 14.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 16.dp),
+        glow = if (state.isScanning) EfirGreen else null,
+        glowAlpha = 0.13f,
     ) {
-        Text(
-            text = "ПРИЁМ",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
-            color = if (state.isScanning) scheme.primary else scheme.onSurfaceVariant,
-        )
-        Switch(
-            checked = state.isScanning,
-            onCheckedChange = { onToggle() },
-            modifier = Modifier.padding(start = 10.dp),
-        )
-
-        // Принудительный режим: экран не гаснет, пока приложение открыто.
-        // Стоит рядом с приёмом намеренно — это про то же самое, «ничего не
-        // пропустить», только ценой батареи.
-        Spacer(Modifier.width(14.dp))
-        Text(
-            text = "ЭКРАН",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
-            color = if (state.keepScreenOn) EfirAmber else scheme.onSurfaceVariant,
-        )
-        Switch(
-            checked = state.keepScreenOn,
-            onCheckedChange = onToggleKeepScreenOn,
-            modifier = Modifier.padding(start = 6.dp),
-        )
-
-        Text(
-            text = when {
-                !state.isScanning -> "выключен"
-                state.listenChannels.size >= EfirPrefs.CHANNEL_MAX -> "все каналы"
+        ControlRow(
+            icon = Icons.Filled.Sensors,
+            tint = EfirGreen,
+            title = "Приём",
+            subtitle = when {
+                !state.isScanning -> "выключен — чужие передачи не видны"
+                state.listenChannels.size >= EfirPrefs.CHANNEL_MAX -> "слушаю все каналы"
                 state.listenChannels.size == 1 -> {
                     val only = state.listenChannels.first()
                     "к$only · ${state.channelTitle(only)}"
                 }
                 else -> "каналов: ${state.listenChannels.size}"
             },
-            fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.End,
-            color = if (state.isScanning) scheme.primary else scheme.onSurfaceVariant,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 8.dp),
+            checked = state.isScanning,
+            onCheckedChange = { onToggleScan() },
+        )
+        EfirHairline(Modifier.padding(horizontal = 16.dp))
+        ControlRow(
+            icon = Icons.Filled.LightMode,
+            tint = EfirAmber,
+            title = "Не гасить экран",
+            subtitle = if (state.keepScreenOn) {
+                "экран горит, пока открыто приложение"
+            } else {
+                "экран гаснет как обычно"
+            },
+            checked = state.keepScreenOn,
+            onCheckedChange = onToggleKeepScreenOn,
         )
     }
 }
 
+/** Строка карточки управления: значок, две подписи и тумблер. */
 @Composable
-private fun StatusStrip(state: EfirUiState) {
-    val scheme = MaterialTheme.colorScheme
+private fun ControlRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(scheme.surface)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StatusDot(active = state.isBroadcasting)
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = if (state.isBroadcasting) "ВЕЩАЮ К${state.transmitChannel}" else "МОЛЧУ",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
-            color = scheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = state.nick + " · " + state.peersSeen + " рядом",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
-            color = scheme.onSurfaceVariant,
-        )
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .halo(tint, alpha = if (checked) 0.30f else 0f, spread = 1.5f)
+                .clip(RoundedCornerShape(11.dp))
+                .background(tint.copy(alpha = if (checked) 0.20f else 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (checked) tint else tint.copy(alpha = 0.45f),
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(13.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        EfirSwitch(checked = checked, onCheckedChange = onCheckedChange, tint = tint)
     }
 }
 
-@Composable
-private fun StatusDot(active: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(8.dp)
-            .background(
-                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                shape = CircleShape,
-            ),
-    )
-}
+/* ------------------------------------------------------------------ подсказки */
 
 @Composable
 private fun NoticeCard(
@@ -685,46 +774,66 @@ private fun NoticeCard(
     onDismiss: (() -> Unit)? = null,
     dismissLabel: String = "Уже сделал",
 ) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        glow = EfirAmber,
+        glowAlpha = 0.10f,
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(
-                text = title,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 13.sp,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = body,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
+        Row(Modifier.padding(start = 14.dp, end = 14.dp, top = 14.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .halo(EfirAmber, alpha = 0.22f, spread = 1.5f)
+                    .clip(CircleShape)
+                    .background(EfirAmber.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
             ) {
-                if (onDismiss != null) {
-                    TextButton(onClick = onDismiss) {
-                        Text(
-                            dismissLabel,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                TextButton(onClick = onAction) {
-                    Text(actionLabel, fontFamily = FontFamily.Monospace)
-                }
+                Icon(
+                    Icons.Filled.PriorityHigh,
+                    contentDescription = null,
+                    tint = EfirAmber,
+                    modifier = Modifier.size(16.dp),
+                )
             }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = body,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (onDismiss != null) {
+                GlowChipButton(
+                    label = dismissLabel,
+                    onClick = onDismiss,
+                    tint = EfirMuted,
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            GlowChipButton(
+                label = actionLabel,
+                onClick = onAction,
+                tint = EfirAmber,
+                filled = true,
+            )
         }
     }
 }
@@ -752,22 +861,15 @@ private fun MessageList(
     }
 
     if (messages.isEmpty()) {
-        Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "В ЭФИРЕ ПУСТО\n\nВключите приём и подождите.\nВсё, что передают рядом,\nпоявится здесь.",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        EmptyAir(modifier)
         return
     }
 
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 8.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(items = ordered, key = { it.id }) { message ->
             val known = contacts.any { it.handle.equals(message.nick, ignoreCase = true) }
@@ -778,18 +880,78 @@ private fun MessageList(
                 profileResolver = profileResolver,
                 canWrite = known,
                 onWriteTo = onWriteTo,
+                modifier = Modifier.animateItem(),
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         }
     }
 }
 
 /**
- * Одна строка списка передач — во всю ширину.
+ * Пустой эфир. Раньше здесь был текст в четыре строки; теперь молчание
+ * показано тем же способом, что и работа, — кругом, только погасшим.
+ */
+@Composable
+private fun EmptyAir(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "empty")
+    val wave by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "emptyWave",
+    )
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .drawBehind {
+                        repeat(3) { i ->
+                            val p = ((wave + i / 3f) % 1f)
+                            drawCircle(
+                                color = EfirGreen.copy(alpha = 0.20f * (1f - p)),
+                                radius = size.minDimension / 2f * (0.35f + p * 0.65f),
+                                center = center,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Sensors,
+                    contentDescription = null,
+                    tint = EfirGreen.copy(alpha = 0.55f),
+                    modifier = Modifier.size(30.dp),
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(
+                text = "В эфире пусто",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Включите приём и подождите.\nВсё, что передают рядом, появится здесь.",
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * Одна принятая передача.
  *
  * Это не переписка, а поток принимаемых сообщений, поэтому пузырей и
- * выравнивания по краям здесь нет: свои и чужие отличаются подписью и
- * цветной полосой слева, а не положением на экране.
+ * выравнивания по краям здесь нет: своё, чужое и личное различаются
+ * цветом кружка с буквой и ярлыком, а не положением на экране.
  */
 @Composable
 private fun MessageRow(
@@ -799,94 +961,118 @@ private fun MessageRow(
     profileResolver: (String) -> String?,
     canWrite: Boolean,
     onWriteTo: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isLocal = message.origin == EfirMessage.Origin.LOCAL
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val stamp = remember(message.receivedAtMillis) {
-        SimpleDateFormat("dd.MM HH:mm:ss", Locale("ru")).format(Date(message.receivedAtMillis))
+        SimpleDateFormat("HH:mm:ss", Locale("ru")).format(Date(message.receivedAtMillis))
+    }
+    val day = remember(message.receivedAtMillis) {
+        SimpleDateFormat("dd.MM", Locale("ru")).format(Date(message.receivedAtMillis))
     }
     val accent = when {
-        message.isDirect -> scheme.secondary
-        isLocal -> scheme.onSurfaceVariant
-        else -> scheme.primary
+        message.isDirect -> EfirAmber
+        isLocal -> EfirSky
+        else -> EfirGreen
+    }
+    val title = when {
+        isLocal && message.peerHandle != null -> "Я → " + message.peerHandle.uppercase(Locale("ru"))
+        isLocal -> "Я"
+        else -> message.nick.uppercase(Locale("ru"))
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isLocal) scheme.surface else scheme.background)
-            .height(IntrinsicSize.Min),
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        glow = if (message.isDirect) EfirAmber else null,
+        glowAlpha = 0.12f,
     ) {
-        // Полоса слева — единственный признак «своё или чужое».
-        Box(
-            Modifier
-                .width(3.dp)
-                .fillMaxHeight()
-                .background(accent)
-        )
-
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            if (message.isDirect) {
-                DirectBadge()
-            }
+        Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = when {
-                        isLocal && message.peerHandle != null ->
-                            "Я → " + message.peerHandle.uppercase(Locale("ru"))
-                        isLocal -> "Я"
-                        else -> message.nick.uppercase(Locale("ru"))
-                    },
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                HandleAvatar(
+                    handle = if (isLocal) "Я" else message.nick,
                     color = accent,
+                    glow = message.isDirect,
                 )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = "к${message.channel} · ${channelTitle(message.channel)}",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    color = scheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = stamp,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    color = scheme.onSurfaceVariant,
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "к${message.channel} · ${channelTitle(message.channel)}",
+                        fontSize = 12.sp,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = stamp,
+                        fontFamily = EfirMono,
+                        fontSize = 12.sp,
+                        color = scheme.onSurface.copy(alpha = 0.75f),
+                    )
+                    Text(
+                        text = day,
+                        fontFamily = EfirMono,
+                        fontSize = 10.sp,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (message.isDirect) {
+                Spacer(Modifier.height(10.dp))
+                EfirTag(
+                    text = "личное сообщение",
+                    color = EfirAmber,
+                    icon = Icons.Filled.Lock,
+                    solid = true,
                 )
             }
 
             if (message.text.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = message.text,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
                     color = scheme.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
+            val actions = mutableListOf<@Composable () -> Unit>()
+
             message.linkCode?.let { code ->
                 val url = linkResolver(code)
-                RowAction(
-                    icon = Icons.AutoMirrored.Filled.OpenInNew,
-                    // Без адреса сети код всё равно показываем: его можно
-                    // набрать руками, когда адрес будет настроен.
-                    label = if (url != null) "открыть /p/$code" else "вложение /p/$code",
-                    enabled = url != null,
-                    onClick = {
-                        url?.let {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse(it))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                        }
-                    },
-                )
+                actions += {
+                    GlowChipButton(
+                        icon = Icons.AutoMirrored.Filled.OpenInNew,
+                        // Без адреса сети код всё равно показываем: его можно
+                        // набрать руками, когда адрес будет настроен.
+                        label = if (url != null) "открыть /p/$code" else "вложение /p/$code",
+                        enabled = url != null,
+                        tint = EfirSky,
+                        onClick = {
+                            url?.let {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                    )
+                }
             }
 
             if (!isLocal) {
@@ -894,101 +1080,54 @@ private fun MessageRow(
                 // ни поиска, так что это единственный путь к чужой ленте.
                 message.profileCode?.let { profile ->
                     profileResolver(profile)?.let { profileUrl ->
-                        RowAction(
-                            icon = Icons.Filled.Badge,
-                            label = "лента ${message.nick}",
-                            onClick = {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl))
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            },
-                        )
+                        actions += {
+                            GlowChipButton(
+                                icon = Icons.Filled.Badge,
+                                label = "лента",
+                                tint = EfirGreen,
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
 
                 // Написать можно только знакомому: ключ приезжает с его
                 // передачей, без ключа шифровать нечем.
                 if (canWrite) {
-                    RowAction(
-                        icon = Icons.Filled.Lock,
-                        label = "написать сообщение",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        onClick = { onWriteTo(message.nick) },
-                    )
+                    actions += {
+                        GlowChipButton(
+                            icon = Icons.Filled.Lock,
+                            label = "написать",
+                            tint = EfirAmber,
+                            filled = true,
+                            onClick = { onWriteTo(message.nick) },
+                        )
+                    }
+                }
+            }
+
+            if (actions.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    actions.forEach { it() }
                 }
             }
 
             message.sourceDeviceName?.takeIf { it.isNotBlank() && !isLocal }?.let {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = it,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
-                    color = scheme.onSurfaceVariant,
+                    fontFamily = EfirMono,
+                    fontSize = 10.sp,
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
         }
-    }
-}
-
-/**
- * Отметка личного сообщения. Одного замка мало: разница между «слышали все
- * вокруг» и «прочитал только адресат» слишком важная, чтобы держать её
- * в мелкой иконке.
- */
-@Composable
-private fun DirectBadge() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(bottom = 4.dp),
-    ) {
-        Icon(
-            Icons.Filled.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(11.dp),
-            tint = MaterialTheme.colorScheme.secondary,
-        )
-        Spacer(Modifier.width(5.dp))
-        Text(
-            text = "ЛИЧНОЕ СООБЩЕНИЕ",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.5.sp,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-    }
-}
-
-/** Действие под сообщением: иконка и подпись в одну строку. */
-@Composable
-private fun RowAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    tint: Color = MaterialTheme.colorScheme.primary,
-) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-        modifier = Modifier.padding(top = 2.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = if (enabled) tint else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = label,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            color = if (enabled) tint else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -1013,99 +1152,160 @@ private fun TransmitBar(
         (draft.isNotBlank() || hasAttachment) &&
         !overBudget
 
+    val fill by animateFloatAsState(
+        targetValue = (used.toFloat() / budget.coerceAtLeast(1)).coerceIn(0f, 1f),
+        animationSpec = tween(220),
+        label = "budget",
+    )
+    val fillColor = when {
+        overBudget -> MaterialTheme.colorScheme.error
+        fill > 0.8f -> EfirAmber
+        else -> EfirGreen
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.07f), Color.White.copy(alpha = 0.03f)),
+                ),
+            )
             .navigationBarsPadding()
             .imePadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onAttach) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Notes,
-                    contentDescription = "Дописать текст",
-                    tint = if (hasAttachment) {
-                        MaterialTheme.colorScheme.secondary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+        Row(verticalAlignment = Alignment.Bottom) {
+            GlowIconButton(
+                icon = Icons.AutoMirrored.Filled.Notes,
+                description = "Дописать текст",
+                tint = if (hasAttachment) EfirAmber else EfirMuted,
+                highlighted = hasAttachment,
+                onClick = onAttach,
+                size = 42.dp,
+                modifier = Modifier.padding(bottom = 2.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .glass(RoundedCornerShape(22.dp), fill = 0.05f, stroke = 0.10f),
+            ) {
+                TextField(
+                    value = draft,
+                    onValueChange = onDraftChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.canUseRadio,
+                    isError = overBudget,
+                    singleLine = false,
+                    maxLines = 4,
+                    placeholder = {
+                        Text(
+                            "Сообщение всем рядом",
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        errorContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        errorIndicatorColor = Color.Transparent,
+                        cursorColor = EfirGreen,
+                    ),
                 )
             }
-            OutlinedTextField(
-                value = draft,
-                onValueChange = onDraftChange,
-                modifier = Modifier.weight(1f),
-                enabled = state.canUseRadio,
-                isError = overBudget,
-                singleLine = false,
-                maxLines = 3,
-                placeholder = {
-                    Text(
-                        "Сообщение всем, кто рядом",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                    )
-                },
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = FontFamily.Monospace,
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
-                shape = RoundedCornerShape(8.dp),
-            )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(10.dp))
             if (state.isUploading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                Spacer(Modifier.width(10.dp))
-            } else {
-                IconButton(onClick = onSend, enabled = canSend) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Передать",
-                        tint = if (canSend) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        },
+                Box(
+                    modifier = Modifier.size(46.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = EfirAmber,
                     )
                 }
+            } else {
+                GlowActionButton(
+                    icon = Icons.AutoMirrored.Filled.Send,
+                    description = "Передать",
+                    enabled = canSend,
+                    onClick = onSend,
+                )
             }
             if (state.isBroadcasting) {
-                IconButton(onClick = onStop) {
-                    Icon(
-                        imageVector = Icons.Filled.StopCircle,
-                        contentDescription = "Снять с эфира",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
+                Spacer(Modifier.width(8.dp))
+                GlowIconButton(
+                    icon = Icons.Filled.StopCircle,
+                    description = "Снять с эфира",
+                    tint = MaterialTheme.colorScheme.error,
+                    highlighted = true,
+                    onClick = onStop,
+                    size = 42.dp,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
             }
         }
 
-        Text(
-            text = buildString {
-                append("$used/$budget байт")
-                if (hasAttachment) {
-                    append("  ·  с текстом в сети")
-                }
-                if (state.isUploading) append("  ·  отправляю в сеть…")
-                else if (state.isBroadcasting) append("  ·  в эфире, отправка заменит")
-            },
-            fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
-            // Раньше строка была цвета outline и на тёмном фоне не читалась.
-            color = when {
-                overBudget -> MaterialTheme.colorScheme.error
-                state.isBroadcasting || state.isUploading -> MaterialTheme.colorScheme.secondary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.padding(top = 4.dp, start = 8.dp),
-        )
+        Spacer(Modifier.height(10.dp))
+
+        // Полоса бюджета: 140 байт — жёсткий потолок радиообъявления, и
+        // видеть, сколько осталось, важнее, чем читать цифры.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .clip(EfirChipShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fill)
+                        .clip(EfirChipShape)
+                        .background(fillColor),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "$used/$budget",
+                fontFamily = EfirMono,
+                fontSize = 11.sp,
+                color = if (overBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        val hint = buildString {
+            if (hasAttachment) append("с текстом в сети")
+            if (state.isUploading) {
+                if (isNotEmpty()) append("  ·  ")
+                append("отправляю в сеть…")
+            } else if (state.isBroadcasting) {
+                if (isNotEmpty()) append("  ·  ")
+                append("в эфире, отправка заменит")
+            }
+        }
+        if (hint.isNotEmpty()) {
+            Text(
+                text = hint,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
     }
 }
 
@@ -1136,7 +1336,7 @@ private fun SettingsDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Настройки", fontFamily = FontFamily.Monospace) },
+        title = { Text("Настройки", fontFamily = EfirMono) },
         text = {
             Column(Modifier.verticalScroll(scroll)) {
 
@@ -1175,7 +1375,7 @@ private fun SettingsDialog(
                     )
                     Text(
                         text = "Чаще — быстрее находите друг друга и быстрее садится батарея.",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1183,11 +1383,11 @@ private fun SettingsDialog(
                     Spacer(Modifier.height(16.dp))
                     SettingsSection("Погасший экран")
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = state.keepAwake, onCheckedChange = onChangeKeepAwake)
+                        EfirSwitch(checked = state.keepAwake, onCheckedChange = onChangeKeepAwake)
                         Spacer(Modifier.width(10.dp))
                         Text(
                             "Слушать эфир при выключенном экране",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 12.sp,
                         )
                     }
@@ -1199,7 +1399,7 @@ private fun SettingsDialog(
                             "Телефон засыпает как обычно. Приём в кармане будет урывками — " +
                                 "часть передач пройдёт мимо."
                         },
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1208,7 +1408,7 @@ private fun SettingsDialog(
                             text = "Система всё равно ограничивает это приложение ради батареи. " +
                                 "Откройте «Батарея» в свойствах приложения и поставьте " +
                                 "«Без ограничений», на Xiaomi — ещё и «Автозапуск».",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 10.sp,
                             color = EfirAmber,
                             modifier = Modifier.padding(top = 6.dp),
@@ -1218,17 +1418,17 @@ private fun SettingsDialog(
                     Spacer(Modifier.height(16.dp))
                     SettingsSection("Лента")
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = state.publishToFeed, onCheckedChange = onChangePublish)
+                        EfirSwitch(checked = state.publishToFeed, onCheckedChange = onChangePublish, tint = EfirSky)
                         Spacer(Modifier.width(10.dp))
                         Text(
                             "Публиковать передачи в мою ленту",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 12.sp,
                         )
                     }
                     Text(
                         text = "Позывной: ${state.nick}\nКод ленты: ${state.profileCode}",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 6.dp),
@@ -1241,7 +1441,7 @@ private fun SettingsDialog(
                 Text(
                     text = "Куда складывать записи и откуда брать лимиты. " +
                         "Само общение по воздуху работает и без сайта.",
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = EfirSans,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1250,11 +1450,11 @@ private fun SettingsDialog(
                     value = url,
                     onValueChange = { url = it },
                     singleLine = true,
-                    label = { Text("Адрес", fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+                    label = { Text("Адрес", fontFamily = EfirSans, fontSize = 11.sp) },
                     placeholder = {
-                        Text("https://radioinformator.ru", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                        Text("https://radioinformator.ru", fontFamily = EfirSans, fontSize = 12.sp)
                     },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = EfirMono),
                 )
                 if (state.siteRequiresToken || token.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
@@ -1262,8 +1462,8 @@ private fun SettingsDialog(
                         value = token,
                         onValueChange = { token = it },
                         singleLine = true,
-                        label = { Text("Токен", fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        label = { Text("Токен", fontFamily = EfirSans, fontSize = 11.sp) },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = EfirMono),
                     )
                 }
                 Spacer(Modifier.height(10.dp))
@@ -1277,7 +1477,7 @@ private fun SettingsDialog(
                         SiteStatus.OFFLINE -> "Сайт не отвечает. Проверьте адрес и интернет."
                         SiteStatus.UNKNOWN -> "Связь ещё не проверялась."
                     },
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = EfirSans,
                     fontSize = 11.sp,
                     color = when (state.siteStatus) {
                         SiteStatus.ONLINE -> MaterialTheme.colorScheme.primary
@@ -1286,7 +1486,7 @@ private fun SettingsDialog(
                     },
                 )
                 TextButton(onClick = onRecheck) {
-                    Text("Проверить связь", fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    Text("Проверить связь", fontFamily = EfirSans, fontSize = 11.sp)
                 }
 
                 onSignOut?.let { signOut ->
@@ -1294,7 +1494,7 @@ private fun SettingsDialog(
                     TextButton(onClick = signOut) {
                         Text(
                             "Забыть позывной на этом телефоне",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -1304,25 +1504,20 @@ private fun SettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(url, token) }) {
-                Text("Сохранить", fontFamily = FontFamily.Monospace)
+                Text("Сохранить", fontFamily = EfirMono)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть", fontFamily = FontFamily.Monospace) }
+            TextButton(onClick = onDismiss) { Text("Закрыть", fontFamily = EfirMono) }
         },
     )
 }
 
 @Composable
 private fun SettingsSection(title: String) {
-    Text(
-        text = title.uppercase(Locale("ru")),
-        fontFamily = FontFamily.Monospace,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.sp,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 8.dp),
+    EfirSectionLabel(
+        text = title,
+        modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
     )
 }
 
@@ -1346,51 +1541,76 @@ private fun ListenChannels(
 ) {
     val scheme = MaterialTheme.colorScheme
 
-    Text(
-        text = "СЛУШАЮ",
-        fontFamily = FontFamily.Monospace,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.sp,
-        color = scheme.primary,
-    )
+    EfirSectionLabel(text = "Слушаю", modifier = Modifier.padding(top = 8.dp))
 
-    Row(modifier = Modifier.padding(vertical = 4.dp)) {
-        TextButton(onClick = onAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Text("все", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-        }
-        TextButton(
+    Row(
+        modifier = Modifier.padding(top = 10.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        GlowChipButton(
+            label = "все каналы",
+            tint = EfirGreen,
+            filled = state.listenChannels.size >= EfirPrefs.CHANNEL_MAX,
+            onClick = onAll,
+        )
+        GlowChipButton(
+            label = "только общий",
+            tint = EfirSky,
+            filled = state.listenChannels.size == 1 &&
+                state.listenChannels.contains(EfirPrefs.CHANNEL_DEFAULT),
             onClick = { onOnly(EfirPrefs.CHANNEL_DEFAULT) },
-            contentPadding = PaddingValues(horizontal = 8.dp),
-        ) {
-            Text("только общий", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-        }
+        )
     }
 
     (EfirPrefs.CHANNEL_MIN..EfirPrefs.CHANNEL_MAX).forEach { channel ->
         val isAlarm = channel == EfirPrefs.ALARM_CHANNEL
         val checked = channel in state.listenChannels
+        val accent = if (isAlarm) scheme.error else EfirGreen
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(EfirTileShape)
                 .clickable { onToggle(channel) }
-                .padding(vertical = 1.dp),
+                .padding(horizontal = 8.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = checked, onCheckedChange = { onToggle(channel) })
-            Spacer(Modifier.width(2.dp))
+            // Своя галочка вместо материаловского квадрата: круг со
+            // свечением попадает в общий язык остальных экранов.
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .halo(accent, alpha = if (checked) 0.30f else 0f, spread = 1.7f)
+                    .clip(CircleShape)
+                    .background(if (checked) accent else Color.White.copy(alpha = 0.06f))
+                    .border(
+                        1.dp,
+                        if (checked) Color.Transparent else Color.White.copy(alpha = 0.14f),
+                        CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (checked) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = EfirInk,
+                        modifier = Modifier.size(15.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
             Text(
                 text = "к$channel",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontFamily = EfirMono,
+                fontSize = 12.sp,
                 color = scheme.onSurfaceVariant,
-                modifier = Modifier.width(30.dp),
+                modifier = Modifier.width(34.dp),
             )
             Text(
                 text = state.channelTitle(channel),
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
+                fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
                 color = when {
                     isAlarm -> scheme.error
                     checked -> scheme.onSurface
@@ -1408,10 +1628,10 @@ private fun ListenChannels(
             "Тревожный канал слушается всегда — в этом его смысл. Снять галочку " +
                 "можно, но лучше не надо."
         },
-        fontFamily = FontFamily.Monospace,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
+        lineHeight = 17.sp,
         color = if (state.alarmMuted) scheme.error else scheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 6.dp),
+        modifier = Modifier.padding(top = 10.dp),
     )
 }
 
@@ -1422,48 +1642,73 @@ private fun ChannelPicker(
     title: String,
     onChange: (Int) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    // Подпись отдельной строкой: в одну строку со стрелками она ломалась
+    // пополам и разъезжалась с регулятором.
+    Column(Modifier.padding(bottom = 8.dp)) {
         Text(
             text = label,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            modifier = Modifier.weight(1f),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp),
         )
-        IconButton(
-            onClick = { onChange(channel - 1) },
-            enabled = channel > EfirPrefs.CHANNEL_MIN,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .glass(EfirTileShape, fill = 0.05f, stroke = 0.09f)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.Remove, contentDescription = "Канал ниже")
-        }
-        // Тема важнее номера: человек ищет «Еду», а не «канал 2».
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(120.dp),
-        ) {
-            Text(
-                text = title,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.secondary,
-                textAlign = TextAlign.Center,
+            StepButton(
+                icon = Icons.Filled.Remove,
+                description = "Канал ниже",
+                enabled = channel > EfirPrefs.CHANNEL_MIN,
+                onClick = { onChange(channel - 1) },
             )
-            Text(
-                text = "канал $channel",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Тема важнее номера: человек ищет «Еду», а не «канал 2».
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "канал $channel",
+                    fontFamily = EfirMono,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            StepButton(
+                icon = Icons.Filled.Add,
+                description = "Канал выше",
+                enabled = channel < EfirPrefs.CHANNEL_MAX,
+                onClick = { onChange(channel + 1) },
             )
-        }
-        IconButton(
-            onClick = { onChange(channel + 1) },
-            enabled = channel < EfirPrefs.CHANNEL_MAX,
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Канал выше")
         }
     }
+}
+
+/** Круглая кнопка «минус/плюс» для регуляторов настроек. */
+@Composable
+private fun StepButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    GlowIconButton(
+        icon = icon,
+        description = description,
+        tint = EfirSky,
+        enabled = enabled,
+        onClick = onClick,
+        size = 38.dp,
+    )
 }
 
 @Composable
@@ -1475,27 +1720,37 @@ private fun IntervalPicker(
     onChange: (Int) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = { onChange(seconds - 5) }, enabled = seconds > min) {
-            Icon(Icons.Filled.Remove, contentDescription = "Реже")
-        }
+        StepButton(
+            icon = Icons.Filled.Remove,
+            description = "Реже",
+            enabled = seconds > min,
+            onClick = { onChange(seconds - 5) },
+        )
         Text(
             text = "$seconds с",
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
+            fontFamily = EfirMono,
+            fontSize = 14.sp,
             color = MaterialTheme.colorScheme.secondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(56.dp),
         )
-        IconButton(onClick = { onChange(seconds + 5) }, enabled = seconds < max) {
-            Icon(Icons.Filled.Add, contentDescription = "Чаще")
-        }
+        StepButton(
+            icon = Icons.Filled.Add,
+            description = "Чаще",
+            enabled = seconds < max,
+            onClick = { onChange(seconds + 5) },
+        )
     }
 }
 
@@ -1526,7 +1781,7 @@ private fun DirectDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Написать лично", fontFamily = FontFamily.Monospace, fontSize = 15.sp) },
+        title = { Text("Написать лично", fontFamily = EfirSans, fontSize = 15.sp) },
         text = {
             Column(Modifier.verticalScroll(scroll)) {
                 if (state.contacts.isEmpty()) {
@@ -1534,14 +1789,14 @@ private fun DirectDialog(
                         text = "Пока некому. Список собеседников пополняется только эфиром: " +
                             "поймайте чью-нибудь передачу — вместе с ней придёт его ключ, " +
                             "и человек появится здесь.",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     Text(
                         text = "Кому",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 10.sp,
                         letterSpacing = 2.sp,
                         color = MaterialTheme.colorScheme.primary,
@@ -1563,7 +1818,7 @@ private fun DirectDialog(
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = contact.handle,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = EfirSans,
                                 fontSize = 13.sp,
                                 color = if (selected) {
                                     MaterialTheme.colorScheme.primary
@@ -1582,15 +1837,15 @@ private fun DirectDialog(
                         isError = overBudget,
                         maxLines = 4,
                         label = {
-                            Text("Сообщение", fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                            Text("Сообщение", fontFamily = EfirSans, fontSize = 11.sp)
                         },
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                         ),
                         supportingText = {
                             Text(
                                 "$used/$budget байт",
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = EfirSans,
                                 fontSize = 10.sp,
                             )
                         },
@@ -1601,7 +1856,7 @@ private fun DirectDialog(
                         text = "Текст зашифрован ключом получателя: в эфире виден только факт, " +
                             "что кто-то кому-то написал. Прямой секретности нет — если ваше " +
                             "кодовое слово узнают, старые записки тоже прочтут.",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1610,7 +1865,7 @@ private fun DirectDialog(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "Сейчас в эфире письмо для $current. Новое его заменит.",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.secondary,
                         )
@@ -1620,17 +1875,17 @@ private fun DirectDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSend(recipient, text) }, enabled = canSend) {
-                Text("Передать", fontFamily = FontFamily.Monospace)
+                Text("Передать", fontFamily = EfirMono)
             }
         },
         dismissButton = {
             if (state.directRecipient != null) {
                 TextButton(onClick = onStop) {
-                    Text("Снять с эфира", fontFamily = FontFamily.Monospace)
+                    Text("Снять с эфира", fontFamily = EfirMono)
                 }
             } else {
                 TextButton(onClick = onDismiss) {
-                    Text("Закрыть", fontFamily = FontFamily.Monospace)
+                    Text("Закрыть", fontFamily = EfirMono)
                 }
             }
         },
@@ -1663,7 +1918,7 @@ private fun MyFeedDialog(
                 } else {
                     ""
                 },
-                fontFamily = FontFamily.Monospace,
+                fontFamily = EfirSans,
                 fontSize = 15.sp,
             )
         },
@@ -1676,13 +1931,13 @@ private fun MyFeedDialog(
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Загружаю…", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("Загружаю…", fontFamily = EfirSans, fontSize = 12.sp)
                 }
 
                 FeedStatus.FAILED -> Text(
                     text = "Лента не загрузилась: ${state.feedError ?: "нет связи"}. " +
                         "Она живёт в сети, поэтому без интернета её не показать.",
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = EfirSans,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1691,7 +1946,7 @@ private fun MyFeedDialog(
                     Text(
                         text = "Пока пусто. Сюда попадают ваши передачи, если включена " +
                             "публикация в ленту.",
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = EfirSans,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1708,14 +1963,14 @@ private fun MyFeedDialog(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = entry.createdHuman,
-                                            fontFamily = FontFamily.Monospace,
+                                            fontFamily = EfirSans,
                                             fontSize = 9.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
                                             text = "к${entry.channel}",
-                                            fontFamily = FontFamily.Monospace,
+                                            fontFamily = EfirSans,
                                             fontSize = 9.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -1723,7 +1978,7 @@ private fun MyFeedDialog(
                                             Spacer(Modifier.width(8.dp))
                                             Text(
                                                 text = "НА ПРОВЕРКЕ",
-                                                fontFamily = FontFamily.Monospace,
+                                                fontFamily = EfirSans,
                                                 fontSize = 8.sp,
                                                 color = MaterialTheme.colorScheme.secondary,
                                             )
@@ -1731,7 +1986,7 @@ private fun MyFeedDialog(
                                     }
                                     Text(
                                         text = entry.broadcast.ifBlank { entry.excerpt },
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = EfirSans,
                                         fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.padding(top = 2.dp),
@@ -1757,16 +2012,16 @@ private fun MyFeedDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Закрыть", fontFamily = FontFamily.Monospace)
+                Text("Закрыть", fontFamily = EfirMono)
             }
         },
         dismissButton = {
             Row {
                 TextButton(onClick = onReload) {
-                    Text("Обновить", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("Обновить", fontFamily = EfirSans, fontSize = 12.sp)
                 }
                 TextButton(onClick = onOpenInBrowser) {
-                    Text("В браузере", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("В браузере", fontFamily = EfirSans, fontSize = 12.sp)
                 }
             }
         },
@@ -1777,12 +2032,12 @@ private fun MyFeedDialog(
         AlertDialog(
             onDismissRequest = { confirmCode = null },
             containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("Удалить запись?", fontFamily = FontFamily.Monospace, fontSize = 15.sp) },
+            title = { Text("Удалить запись?", fontFamily = EfirSans, fontSize = 15.sp) },
             text = {
                 Text(
                     text = "Запись /p/$code исчезнет из сети навсегда. У тех, кто уже " +
                         "принял её из эфира, она останется в журнале — это их копия.",
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = EfirSans,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1792,12 +2047,12 @@ private fun MyFeedDialog(
                     onDelete(code)
                     confirmCode = null
                 }) {
-                    Text("Удалить", fontFamily = FontFamily.Monospace, color = EfirRose)
+                    Text("Удалить", fontFamily = EfirSans, color = EfirRose)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmCode = null }) {
-                    Text("Отмена", fontFamily = FontFamily.Monospace)
+                    Text("Отмена", fontFamily = EfirMono)
                 }
             },
         )
@@ -1818,7 +2073,7 @@ private fun AttachDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Дописать к передаче", fontFamily = FontFamily.Monospace, fontSize = 15.sp) },
+        title = { Text("Дописать к передаче", fontFamily = EfirSans, fontSize = 15.sp) },
         text = {
             Column {
                 Text(
@@ -1830,7 +2085,7 @@ private fun AttachDialog(
                         "Сайт недоступен. Задайте его адрес в настройках, иначе дописывать " +
                             "некуда — по воздуху проходит лишь короткая строка."
                     },
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = EfirSans,
                     fontSize = 11.sp,
                     color = if (siteReady) {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -1848,13 +2103,13 @@ private fun AttachDialog(
                     isError = overText,
                     maxLines = 8,
                     label = {
-                        Text("Полный текст", fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                        Text("Полный текст", fontFamily = EfirSans, fontSize = 11.sp)
                     },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = EfirMono),
                     supportingText = {
                         Text(
                             "$textLength/${state.limits.maxTextChars} символов",
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = EfirSans,
                             fontSize = 10.sp,
                         )
                     },
@@ -1863,12 +2118,12 @@ private fun AttachDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss, enabled = !overText) {
-                Text("Готово", fontFamily = FontFamily.Monospace)
+                Text("Готово", fontFamily = EfirMono)
             }
         },
         dismissButton = {
             TextButton(onClick = onClear) {
-                Text("Убрать", fontFamily = FontFamily.Monospace)
+                Text("Убрать", fontFamily = EfirMono)
             }
         },
     )

@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -89,47 +101,34 @@ fun ContactsScreen(
     val busy = state.contactsStatus == ContactsStatus.LOADING ||
         state.contactsStatus == ContactsStatus.SAVING
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    EfirBackdrop(alive = false, modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Назад",
-                                tint = EfirGreen,
-                            )
-                        }
-                    },
-                    title = {
-                        Text(
-                            text = "ВИЗИТКА",
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 3.sp,
-                            fontSize = 15.sp,
-                        )
-                    },
-                    actions = {
+                Box(Modifier.statusBarsPadding()) {
+                    EfirScreenHeader(
+                        title = "Визитка",
+                        subtitle = "как с вами связаться после эфира",
+                        onBack = onBack,
+                        accent = EfirPeach,
+                    ) {
                         if (busy) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp).padding(end = 4.dp),
+                                modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
                                 color = EfirAmber,
                             )
                         } else {
-                            TextButton(onClick = onReload) {
-                                Text("обновить", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                            }
+                            GlowIconButton(
+                                icon = Icons.Filled.Refresh,
+                                description = "Обновить",
+                                tint = EfirSky,
+                                onClick = onReload,
+                                size = 40.dp,
+                            )
                         }
-                    },
-                )
+                    }
+                }
             },
         ) { padding ->
             Column(
@@ -145,8 +144,7 @@ fun ContactsScreen(
                         "Пустые строки на страницу ленты не попадают, а сама страница " +
                         "открывается только по коду из эфира — ни списка людей, ни " +
                         "поиска на сайте нет.",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
+                                        fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp, bottom = 12.dp),
                 )
@@ -205,51 +203,43 @@ fun ContactsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = "Показывать на сайте",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
+                                                        fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = "Выключите, чтобы спрятать визитку, не стирая заполненного",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp,
+                                                        fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(
+                    EfirSwitch(
                         checked = draft.public,
                         onCheckedChange = { draft = draft.copy(public = it) },
+                        tint = EfirPeach,
                     )
                 }
 
                 state.contactsError?.let { error ->
                     Text(
                         text = error,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
+                                                fontSize = 11.sp,
                         color = EfirRose,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
 
-                Button(
-                    onClick = { onSave(draft) },
+                Spacer(Modifier.height(18.dp))
+                GlowWideButton(
+                    label = if (state.contactsStatus == ContactsStatus.SAVING) {
+                        "Сохраняем…"
+                    } else {
+                        "Сохранить"
+                    },
                     enabled = !busy,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                ) {
-                    Text(
-                        text = if (state.contactsStatus == ContactsStatus.SAVING) {
-                            "СОХРАНЯЕМ…"
-                        } else {
-                            "СОХРАНИТЬ"
-                        },
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        fontSize = 13.sp,
-                    )
-                }
+                    tint = EfirPeach,
+                    onClick = { onSave(draft) },
+                )
+                Spacer(Modifier.height(6.dp))
 
                 TextButton(
                     onClick = { draft = ContactCard(public = draft.public) },
@@ -258,8 +248,7 @@ fun ContactsScreen(
                 ) {
                     Text(
                         text = "очистить все поля",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
+                                                fontSize = 12.sp,
                         color = EfirRose,
                     )
                 }
@@ -267,8 +256,7 @@ fun ContactsScreen(
                 Text(
                     text = "Пустая визитка со страницы исчезает целиком: сохраните " +
                         "пустые поля — и сеть снова не будет знать о вас ничего.",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                                        fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -292,20 +280,82 @@ private fun ContactField(
         value = value,
         onValueChange = onChange,
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        shape = RoundedCornerShape(10.dp),
-        label = { Text(label, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp),
+        shape = RoundedCornerShape(16.dp),
+        label = { Text(label, fontSize = 12.sp) },
         placeholder = {
             Text(
                 hint,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        textStyle = MaterialTheme.typography.bodyLarge,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = EfirPeach.copy(alpha = 0.55f),
+            unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+            focusedContainerColor = Color.White.copy(alpha = 0.04f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.03f),
+            focusedLabelColor = EfirPeach,
+        ),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
     )
+}
+
+/** Широкая кнопка со свечением — «сохранить», «войти» и подобные. */
+@Composable
+fun GlowWideButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    tint: Color = EfirGreen,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (enabled) {
+                    Modifier.softGlow(tint, alpha = 0.30f, spreadDp = 14.dp, corner = 18.dp)
+                } else {
+                    Modifier
+                }
+            )
+            .pressScale(interaction, pressed = 0.97f)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (enabled) {
+                    Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.78f)))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.07f),
+                            Color.White.copy(alpha = 0.04f),
+                        ),
+                    )
+                },
+            )
+            .toggleable(
+                value = false,
+                enabled = enabled,
+                role = Role.Button,
+                interactionSource = interaction,
+                indication = null,
+                onValueChange = { onClick() },
+            )
+            .padding(vertical = 15.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (enabled) EfirInk else Color.White.copy(alpha = 0.30f),
+        )
+    }
 }
 
 /** Черновик визитки должен переживать поворот экрана — иначе набранное пропадёт. */
