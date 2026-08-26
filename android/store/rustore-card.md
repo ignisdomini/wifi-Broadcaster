@@ -152,9 +152,9 @@
 
 | Что | Где лежит |
 |---|---|
-| APK | `D:\CLAUDE\dist\radioinformator-2.4.apk` |
-| Иконка 512×512 | `D:\CLAUDE\radioinformator-app\store\icon-512.png` |
-| Скриншоты | `D:\CLAUDE\radioinformator-app\store\screenshots\` |
+| APK | `D:\CLAUDE\dist\radioinformator-2.5.apk` |
+| Иконка 512×512 | `D:\CLAUDE\wifi-broadcaster\android\store\icon-512.png` |
+| Скриншоты | `D:\CLAUDE\wifi-broadcaster\android\store\screenshots\` — 6 штук, 1440×2560, ровно 9:16 |
 
 ## Порядок действий
 
@@ -168,7 +168,7 @@
 ## Про обновления — прочтите один раз
 
 Подпись менять нельзя: RuStore привяжет приложение к сертификату из первой
-загрузки. Ключ лежит в `D:\CLAUDE\radioinformator-app\radioinformator.jks`,
+загрузки. Ключ лежит в `D:\CLAUDE\wifi-broadcaster\android\radioinformator.jks`,
 пароль — в `keystore.properties` рядом. **Потеряете их — обновить
 приложение будет невозможно, только выкладывать заново под другим
 идентификатором, и все установки у людей осиротеют.** Сделайте копию в
